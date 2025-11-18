@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live XAUUSD Candlestick Chart</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-chart-financial/0.2.1/chartjs-chart-financial.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -69,6 +69,7 @@
             gap: 15px;
             flex-wrap: wrap;
             margin-bottom: 20px;
+            align-items: center;
         }
         button, select {
             padding: 12px 24px;
@@ -87,6 +88,18 @@
         }
         button:active {
             transform: translateY(0);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        input[type="text"] {
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid #667eea;
+            width: 300px;
+            font-size: 16px;
         }
         .status {
             text-align: center;
@@ -116,6 +129,7 @@
             margin-bottom: 20px;
             text-align: center;
             color: #1565c0;
+            font-size: 14px;
         }
         .api-info a {
             color: #0d47a1;
@@ -128,43 +142,47 @@
         <h1>📊 XAUUSD Live Candlestick Chart</h1>
         
         <div class="api-info">
-            <strong>🔑 API Key Required:</strong> This chart uses real market data. 
-            Get your free API key from <a href="https://twelvedata.com/" target="_blank">Twelve Data</a> 
-            or <a href="https://www.alphavantage.co/" target="_blank">Alpha Vantage</a>
+            <strong>🔑 Free API Setup:</strong> Get your free API key from 
+            <a href="https://twelvedata.com/apikey" target="_blank">Twelve Data</a> (800 free requests/day) 
+            or <a href="https://www.alphavantage.co/support/#api-key" target="_blank">Alpha Vantage</a> (25 free requests/day)
         </div>
 
         <div class="controls">
-            <input type="text" id="apiKey" placeholder="Enter your API key" style="padding: 12px; border-radius: 8px; border: 2px solid #667eea; width: 300px;">
-            <button onclick="connectAPI()">Connect to API</button>
+            <select id="apiProvider">
+                <option value="twelvedata">Twelve Data</option>
+                <option value="alphavantage">Alpha Vantage</option>
+            </select>
+            <input type="text" id="apiKey" placeholder="Enter your API key">
+            <button onclick="connectAPI()" id="connectBtn">Connect to API</button>
             <select id="timeframe">
                 <option value="1min">1 Minute</option>
                 <option value="5min" selected>5 Minutes</option>
                 <option value="15min">15 Minutes</option>
                 <option value="30min">30 Minutes</option>
-                <option value="1h">1 Hour</option>
+                <option value="60min">1 Hour</option>
             </select>
         </div>
         
         <div class="info-bar">
             <div class="info-item">
                 <div class="info-label">Current Price</div>
-                <div class="info-value" id="currentPrice">Loading...</div>
+                <div class="info-value" id="currentPrice">--</div>
             </div>
             <div class="info-item">
                 <div class="info-label">Change</div>
-                <div class="info-value" id="priceChange">-</div>
+                <div class="info-value" id="priceChange">--</div>
             </div>
             <div class="info-item">
                 <div class="info-label">High</div>
-                <div class="info-value" id="highPrice">-</div>
+                <div class="info-value" id="highPrice">--</div>
             </div>
             <div class="info-item">
                 <div class="info-label">Low</div>
-                <div class="info-value" id="lowPrice">-</div>
+                <div class="info-value" id="lowPrice">--</div>
             </div>
             <div class="info-item">
                 <div class="info-label">Last Update</div>
-                <div class="info-value" id="lastUpdate">-</div>
+                <div class="info-value" id="lastUpdate">--</div>
             </div>
         </div>
 
@@ -172,25 +190,67 @@
             <canvas id="chart"></canvas>
         </div>
 
-        <div class="status loading" id="status">Enter API key to connect to live data</div>
+        <div class="status loading" id="status">Enter API key and click Connect to start</div>
     </div>
 
     <script>
         let chart;
         let candlestickData = [];
         let apiKey = '';
+        let apiProvider = 'twelvedata';
         let timeframe = '5min';
         let updateInterval;
+        let isConnected = false;
 
         function initChart() {
             const ctx = document.getElementById('chart').getContext('2d');
             
+            Chart.register({
+                id: 'candlestick',
+                beforeDatasetsDraw(chart) {
+                    const ctx = chart.ctx;
+                    const data = chart.data.datasets[0].data;
+                    
+                    data.forEach((point, index) => {
+                        const meta = chart.getDatasetMeta(0);
+                        const x = meta.data[index]?.x;
+                        const yScale = chart.scales.y;
+                        
+                        if (!x || !yScale) return;
+                        
+                        const yOpen = yScale.getPixelForValue(point.o);
+                        const yClose = yScale.getPixelForValue(point.c);
+                        const yHigh = yScale.getPixelForValue(point.h);
+                        const yLow = yScale.getPixelForValue(point.l);
+                        
+                        const isUp = point.c >= point.o;
+                        const color = isUp ? '#10b981' : '#ef4444';
+                        const width = 8;
+                        
+                        // Draw wick
+                        ctx.strokeStyle = color;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(x, yHigh);
+                        ctx.lineTo(x, yLow);
+                        ctx.stroke();
+                        
+                        // Draw body
+                        ctx.fillStyle = color;
+                        const bodyHeight = Math.abs(yClose - yOpen) || 1;
+                        ctx.fillRect(x - width/2, Math.min(yOpen, yClose), width, bodyHeight);
+                    });
+                }
+            });
+            
             chart = new Chart(ctx, {
-                type: 'candlestick',
+                type: 'line',
                 data: {
                     datasets: [{
                         label: 'XAUUSD',
-                        data: candlestickData
+                        data: candlestickData,
+                        borderColor: 'transparent',
+                        pointRadius: 0
                     }]
                 },
                 options: {
@@ -244,63 +304,135 @@
             });
         }
 
+        async function fetchTwelveData() {
+            const interval = timeframe;
+            const url = `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${interval}&outputsize=50&apikey=${apiKey}`;
+            
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.status === 'error') {
+                throw new Error(data.message || 'API Error');
+            }
+
+            if (!data.values || data.values.length === 0) {
+                throw new Error('No data returned from API');
+            }
+
+            return data.values.reverse().map(item => ({
+                x: new Date(item.datetime).getTime(),
+                o: parseFloat(item.open),
+                h: parseFloat(item.high),
+                l: parseFloat(item.low),
+                c: parseFloat(item.close)
+            }));
+        }
+
+        async function fetchAlphaVantage() {
+            const intervalMap = {
+                '1min': '1min',
+                '5min': '5min',
+                '15min': '15min',
+                '30min': '30min',
+                '60min': '60min'
+            };
+            
+            const interval = intervalMap[timeframe];
+            const url = `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=XAU&to_symbol=USD&interval=${interval}&apikey=${apiKey}&outputsize=compact`;
+            
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data['Error Message']) {
+                throw new Error(data['Error Message']);
+            }
+
+            if (data['Note']) {
+                throw new Error('API rate limit reached. Please wait a minute.');
+            }
+
+            const timeSeries = data[`Time Series FX (${interval})`];
+            if (!timeSeries) {
+                throw new Error('No data available');
+            }
+
+            const dataPoints = Object.keys(timeSeries).slice(0, 50).reverse().map(timestamp => ({
+                x: new Date(timestamp).getTime(),
+                o: parseFloat(timeSeries[timestamp]['1. open']),
+                h: parseFloat(timeSeries[timestamp]['2. high']),
+                l: parseFloat(timeSeries[timestamp]['3. low']),
+                c: parseFloat(timeSeries[timestamp]['4. close'])
+            }));
+
+            return dataPoints;
+        }
+
         async function fetchHistoricalData() {
             try {
-                updateStatus('loading', 'Fetching historical data...');
-                
-                // Twelve Data API endpoint
-                const url = `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${timeframe}&outputsize=50&apikey=${apiKey}`;
-                
-                const response = await fetch(url);
-                const data = await response.json();
+                updateStatus('loading', '📡 Fetching market data...');
+                document.getElementById('connectBtn').disabled = true;
 
-                if (data.status === 'error' || !data.values) {
-                    throw new Error(data.message || 'Failed to fetch data');
+                let data;
+                if (apiProvider === 'twelvedata') {
+                    data = await fetchTwelveData();
+                } else {
+                    data = await fetchAlphaVantage();
                 }
 
-                candlestickData = data.values.reverse().map(item => ({
-                    x: new Date(item.datetime).getTime(),
-                    o: parseFloat(item.open),
-                    h: parseFloat(item.high),
-                    l: parseFloat(item.low),
-                    c: parseFloat(item.close)
-                }));
-
+                candlestickData = data;
                 chart.data.datasets[0].data = candlestickData;
                 chart.update();
                 
                 updateInfoBar();
                 updateStatus('connected', '🟢 Connected - Live Data Active');
+                isConnected = true;
                 
                 return true;
             } catch (error) {
-                console.error('Error fetching data:', error);
+                console.error('Error:', error);
                 updateStatus('disconnected', `🔴 Error: ${error.message}`);
+                isConnected = false;
                 return false;
+            } finally {
+                document.getElementById('connectBtn').disabled = false;
             }
         }
 
         async function fetchLatestPrice() {
+            if (!isConnected) return;
+            
             try {
-                const url = `https://api.twelvedata.com/price?symbol=XAU/USD&apikey=${apiKey}`;
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (data.price) {
-                    const price = parseFloat(data.price);
-                    const lastCandle = candlestickData[candlestickData.length - 1];
+                let price;
+                
+                if (apiProvider === 'twelvedata') {
+                    const url = `https://api.twelvedata.com/price?symbol=XAU/USD&apikey=${apiKey}`;
+                    const response = await fetch(url);
+                    const data = await response.json();
                     
-                    if (lastCandle) {
-                        lastCandle.c = price;
-                        lastCandle.h = Math.max(lastCandle.h, price);
-                        lastCandle.l = Math.min(lastCandle.l, price);
-                        
-                        chart.update('none');
-                        updateInfoBar();
+                    if (data.price) {
+                        price = parseFloat(data.price);
+                    }
+                } else {
+                    const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=XAU&to_currency=USD&apikey=${apiKey}`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    
+                    if (data['Realtime Currency Exchange Rate']) {
+                        price = parseFloat(data['Realtime Currency Exchange Rate']['5. Exchange Rate']);
                     }
                 }
+
+                if (price && candlestickData.length > 0) {
+                    const lastCandle = candlestickData[candlestickData.length - 1];
+                    lastCandle.c = price;
+                    lastCandle.h = Math.max(lastCandle.h, price);
+                    lastCandle.l = Math.min(lastCandle.l, price);
+                    
+                    chart.update('none');
+                    updateInfoBar();
+                }
             } catch (error) {
-                console.error('Error fetching latest price:', error);
+                console.error('Error updating price:', error);
             }
         }
 
@@ -318,8 +450,7 @@
             document.getElementById('currentPrice').textContent = `$${currentPrice.toFixed(2)}`;
             
             const changeEl = document.getElementById('priceChange');
-            changeEl.textContent = `${change >= 0 ? '+' : ''}$${change.toFixed(2)} (${changePercent}%)`;
-            changeEl.className = 'info-value ' + (change >= 0 ? 'green' : 'red');
+            changeEl.innerHTML = `<span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}$${change.toFixed(2)} (${changePercent}%)</span>`;
 
             const allPrices = candlestickData.flatMap(c => [c.h, c.l]);
             const high = Math.max(...allPrices);
@@ -345,28 +476,25 @@
             }
 
             apiKey = apiKeyInput;
+            apiProvider = document.getElementById('apiProvider').value;
             
             const success = await fetchHistoricalData();
             
             if (success) {
                 if (updateInterval) clearInterval(updateInterval);
                 
-                // Update price every 10 seconds
-                updateInterval = setInterval(fetchLatestPrice, 10000);
-                
-                // Refresh full data every 5 minutes
+                updateInterval = setInterval(fetchLatestPrice, 15000);
                 setInterval(fetchHistoricalData, 300000);
             }
         }
 
         document.getElementById('timeframe').addEventListener('change', (e) => {
             timeframe = e.target.value;
-            if (apiKey) {
+            if (isConnected) {
                 fetchHistoricalData();
             }
         });
 
-        // Allow Enter key to connect
         document.getElementById('apiKey').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 connectAPI();
