@@ -1,286 +1,672 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MT5‑style Volatility Charts (Deriv) — Live</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root{
-      --bg:#0b1220; --panel:#0f1720; --muted:#9aa4b2; --accent:#7dd3fc;
-      --height:calc(100vh - 48px);
-    }
-    *{box-sizing:border-box;font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial}
-    body{margin:0;background:linear-gradient(180deg,#071025 0%, #071621 100%);color:#dbe7f0}
-    header{height:48px;padding:8px 12px;display:flex;align-items:center;gap:12px;background:linear-gradient(90deg,rgba(255,255,255,0.02),transparent);border-bottom:1px solid rgba(255,255,255,0.03)}
-    .logo{font-weight:700;letter-spacing:0.6px}
-    .toolbar{display:flex;gap:8px;align-items:center}
-    .btn{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.04);padding:6px 10px;border-radius:6px;cursor:pointer;color:var(--muted)}
-    .btn.active{background:linear-gradient(90deg, rgba(125,211,252,0.08), rgba(59,130,246,0.06));color:var(--accent);border-color:rgba(125,211,252,0.14)}
-    .container{display:grid;grid-template-columns:220px 1fr;padding:12px;gap:12px}
-    .sidebar{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);height:var(--height);overflow:auto}
-    .symbols{display:flex;flex-direction:column;gap:8px}
-    .sym{padding:8px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
-    .sym:hover{background:rgba(255,255,255,0.02)}
-    .sym.active{background:linear-gradient(90deg, rgba(125,211,252,0.06), transparent);border-left:3px solid var(--accent);padding-left:6px}
-    .main{height:var(--height);overflow:auto}
-    .charts-grid{display:grid;grid-template-columns:repeat(2,1fr);grid-auto-rows:320px;gap:12px}
-    .chart-card{background:var(--panel);border-radius:8px;padding:8px;border:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column}
-    .chart-header{display:flex;justify-content:space-between;align-items:center;padding:6px 8px}
-    .chart-title{font-weight:600}
-    .chart-body{flex:1;padding:6px}
-    .status{font-size:12px;color:var(--muted)}
-    .controls{display:flex;gap:6px;align-items:center}
-    .small{font-size:13px;padding:6px 8px}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deriv Volatility Indices - Live Candlestick Chart</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1400px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
+        .info-bar {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+            border-radius: 10px;
+            color: white;
+            flex-wrap: wrap;
+        }
+        .info-item {
+            text-align: center;
+            padding: 5px 15px;
+        }
+        .info-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        .info-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        .chart-wrapper {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .chart-container {
+            position: relative;
+            height: 500px;
+            background: #1a1a2e;
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: grab;
+        }
+        .chart-container:active {
+            cursor: grabbing;
+        }
+        #chartCanvas {
+            width: 100%;
+            height: 100%;
+        }
+        .zoom-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 10;
+        }
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        .zoom-btn:hover {
+            background: white;
+            transform: scale(1.1);
+        }
+        .zoom-btn:active {
+            transform: scale(0.95);
+        }
+        .zoom-info {
+            width: 40px;
+            height: 30px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 11px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        button, select {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+            color: white;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover, select:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .green { color: #10b981; }
+        .red { color: #ef4444; }
+        .api-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #1565c0;
+            font-size: 14px;
+        }
+        .api-info a {
+            color: #0d47a1;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .api-info a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
-  <header>
-    <div class="logo">MT5‑style Volatility — Live (Deriv)</div>
-    <div style="flex:1"></div>
-    <div class="toolbar">
-      <div class="btn" id="connectBtn">Connect</div>
-      <div class="btn" id="liveBtn">Live</div>
-      <div class="btn" id="pauseBtn">Pause</div>
-    </div>
-  </header>
-
-  <div class="container">
-    <aside class="sidebar">
-      <h4 style="margin:0 0 8px 0">Symbols</h4>
-      <div class="symbols" id="symbolsList"></div>
-
-      <hr style="opacity:0.06;margin:12px 0">
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <div class="btn small" data-tf="tick">Tick</div>
-        <div class="btn small" data-tf="1s">1s</div>
-        <div class="btn small" data-tf="1m">1m</div>
-      </div>
-
-      <p style="color:var(--muted);font-size:13px;margin-top:12px">Tips: drag/pinch to zoom. Click "Live" to jump to real-time. This page connects directly to Deriv's WebSocket API (no server).</p>
-    </aside>
-
-    <main class="main">
-      <div class="charts-grid" id="chartsGrid"></div>
-    </main>
-  </div>
-
-  <!-- Lightweight Charts (standalone production build) -->
-  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
-  <script>
-    // ====== Configuration ======
-    const SYMBOLS = ['R_10', 'R_25', 'R_75', 'R_100']; // add more if you like
-    const MAX_TICKS = 600; // keep this many ticks per symbol
-    const DEFAULT_TF = 'tick'; // 'tick' | '1s' | '1m'
-    const DERIV_WS = 'wss://ws.binaryws.com/websockets/v3?app_id=1089';
-
-    // ====== State ======
-    const state = {};
-    let ws = null;
-    let connected = false;
-    let autoLive = true;
-    let currentTF = DEFAULT_TF;
-
-    // ====== Utilities ======
-    function fmtTime(epoch){
-      const d = new Date(epoch*1000);
-      return d.toISOString().replace('T',' ').slice(0,19);
-    }
-
-    // ====== DOM setup ======
-    const symbolsList = document.getElementById('symbolsList');
-    const chartsGrid = document.getElementById('chartsGrid');
-    const connectBtn = document.getElementById('connectBtn');
-    const liveBtn = document.getElementById('liveBtn');
-    const pauseBtn = document.getElementById('pauseBtn');
-
-    // create UI for symbols + charts
-    SYMBOLS.forEach(sym => {
-      // symbol element
-      const el = document.createElement('div');
-      el.className = 'sym';
-      el.id = 'sym_'+sym;
-      el.innerHTML = `<div>${sym}</div><div class="status" id="status_${sym}">—</div>`;
-      el.addEventListener('click', ()=>{document.querySelectorAll('.sym').forEach(s=>s.classList.remove('active'));el.classList.add('active');});
-      symbolsList.appendChild(el);
-
-      // chart card
-      const card = document.createElement('div');
-      card.className = 'chart-card';
-      card.id = 'card_'+sym;
-      card.innerHTML = `
-        <div class="chart-header">
-          <div class="chart-title">${sym} <span id="last_${sym}" style="font-weight:400;color:var(--muted);font-size:13px">—</span></div>
-          <div class="controls">
-            <div class="status" id="stat_${sym}">connecting...</div>
-          </div>
+    <div class="container">
+        <h1>📊 Deriv Volatility Indices</h1>
+        <div class="subtitle">Live Candlestick Chart - Real-time WebSocket Data</div>
+        
+        <div class="api-info">
+            <strong>🎯 No API Key Required!</strong> Connecting directly to Deriv's free WebSocket API
         </div>
-        <div class="chart-body" id="chart_${sym}"></div>
-      `;
-      chartsGrid.appendChild(card);
 
-      // state per symbol
-      state[sym] = {
-        ticks: [], // each: {epoch, quote}
-        candles: [], // aggregated candles for current tf
-        chart: null,
-        series: null,
-        lastTick: null,
-        symbol: sym
-      };
-    });
+        <div class="controls">
+            <select id="symbol">
+                <option value="R_10">Volatility 10 Index</option>
+                <option value="R_25" selected>Volatility 25 Index</option>
+                <option value="R_50">Volatility 50 Index</option>
+                <option value="R_75">Volatility 75 Index</option>
+                <option value="R_100">Volatility 100 Index</option>
+                <option value="1HZ10V">Volatility 10 (1s) Index</option>
+                <option value="1HZ25V">Volatility 25 (1s) Index</option>
+                <option value="1HZ50V">Volatility 50 (1s) Index</option>
+                <option value="1HZ75V">Volatility 75 (1s) Index</option>
+                <option value="1HZ100V">Volatility 100 (1s) Index</option>
+            </select>
+            <select id="timeframe">
+                <option value="60">1 Minute</option>
+                <option value="120">2 Minutes</option>
+                <option value="300" selected>5 Minutes</option>
+                <option value="900">15 Minutes</option>
+                <option value="1800">30 Minutes</option>
+                <option value="3600">1 Hour</option>
+            </select>
+            <button onclick="startChart()" id="startBtn">Start Live Chart</button>
+        </div>
+        
+        <div class="info-bar">
+            <div class="info-item">
+                <div class="info-label">Current Price</div>
+                <div class="info-value" id="currentPrice">--</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Change</div>
+                <div class="info-value" id="priceChange">--</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">High</div>
+                <div class="info-value" id="highPrice">--</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Low</div>
+                <div class="info-value" id="lowPrice">--</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Last Update</div>
+                <div class="info-value" id="lastUpdate">--</div>
+            </div>
+        </div>
 
-    // ====== Chart creation helper ======
-    function createChart(container){
-      const chart = LightweightCharts.createChart(container, {
-        layout: {backgroundColor:'transparent', textColor:'#dbe7f0'},
-        grid: {vertLines:{color:'rgba(255,255,255,0.02)'}, horzLines:{color:'rgba(255,255,255,0.02)'}},
-        rightPriceScale:{borderVisible:false},
-        timeScale:{borderVisible:false, rightOffset:0, timeVisible:true, secondsVisible:true},
-        localization:{dateFormat:'yyyy-MM-dd HH:mm:ss'},
-        crosshair:{mode:1}
-      });
-      return chart;
-    }
+        <div class="chart-wrapper">
+            <div class="chart-container" id="chartContainer">
+                <canvas id="chartCanvas"></canvas>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomIn()">+</button>
+                    <div class="zoom-info" id="zoomLevel">100</div>
+                    <button class="zoom-btn" onclick="zoomOut()">−</button>
+                </div>
+            </div>
+        </div>
 
-    // ====== Candle aggregation ======
-    function epochForTF(epoch, tf){
-      if(tf === 'tick') return epoch; // tick uses exact epoch
-      if(tf === '1s') return epoch; // group by second
-      if(tf === '1m') return Math.floor(epoch/60)*60;
-      return epoch;
-    }
+        <div class="status loading" id="status">Click "Start Live Chart" to begin</div>
+    </div>
 
-    function rebuildCandles(sym){
-      const s = state[sym];
-      const tf = currentTF;
-      if(tf === 'tick'){
-        // show as line series with last price
-        if(!s.lineSeries){
-          if(s.candleSeries) s.chart.removeSeries(s.candleSeries);
-          s.lineSeries = s.chart.addLineSeries({lineWidth:2});
+    <script>
+        let canvas, ctx;
+        let candlestickData = [];
+        let ws;
+        let symbol = 'R_25';
+        let timeframe = 300;
+        let currentCandle = null;
+        let chartPadding = { top: 40, right: 60, bottom: 40, left: 60 };
+        let isConnected = false;
+        
+        // Zoom and scroll variables
+        let candlesPerScreen = 100;
+        let scrollOffset = 0;
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartOffset = 0;
+        let autoScroll = true;
+
+        function initCanvas() {
+            canvas = document.getElementById('chartCanvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Add mouse/touch event listeners for scrolling
+            const container = document.getElementById('chartContainer');
+            
+            container.addEventListener('mousedown', startDrag);
+            container.addEventListener('mousemove', drag);
+            container.addEventListener('mouseup', endDrag);
+            container.addEventListener('mouseleave', endDrag);
+            
+            // Touch events for mobile
+            container.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                startDrag({ clientX: touch.clientX });
+                e.preventDefault();
+            });
+            container.addEventListener('touchmove', (e) => {
+                const touch = e.touches[0];
+                drag({ clientX: touch.clientX });
+                e.preventDefault();
+            });
+            container.addEventListener('touchend', endDrag);
+            
+            // Mouse wheel for zooming
+            container.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    zoomIn();
+                } else {
+                    zoomOut();
+                }
+            }, { passive: false });
         }
-        const data = s.ticks.map(t=>({time:t.epoch, value:t.quote}));
-        s.lineSeries.setData(data);
-        return;
-      }
 
-      // aggregate ticks into candles
-      const buckets = {};
-      s.ticks.forEach(t=>{
-        const key = epochForTF(t.epoch, tf);
-        if(!buckets[key]) buckets[key] = {time: key, open: t.quote, high: t.quote, low: t.quote, close: t.quote};
-        else{ const b = buckets[key]; b.high = Math.max(b.high,t.quote); b.low = Math.min(b.low,t.quote); b.close = t.quote; }
-      });
-      const candleArray = Object.values(buckets).sort((a,b)=>a.time-b.time);
-      if(s.lineSeries){ s.chart.removeSeries(s.lineSeries); s.lineSeries = null; }
-      if(!s.candleSeries) s.candleSeries = s.chart.addCandlestickSeries();
-      s.candleSeries.setData(candleArray);
-    }
+        function startDrag(e) {
+            isDragging = true;
+            dragStartX = e.clientX;
+            dragStartOffset = scrollOffset;
+            autoScroll = false;
+        }
 
-    // ====== WebSocket handling ======
-    function connect(){
-      if(ws && ws.readyState === WebSocket.OPEN) return;
-      ws = new WebSocket(DERIV_WS);
-      ws.onopen = ()=>{
-        connected = true; connectBtn.classList.add('active'); connectBtn.innerText='Connected';
-        // subscribe to ticks for all symbols
-        SYMBOLS.forEach(sym=>{
-          const req = {ticks: sym};
-          ws.send(JSON.stringify(req));
+        function drag(e) {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - dragStartX;
+            const pixelsPerCandle = (canvas.width - chartPadding.left - chartPadding.right) / candlesPerScreen;
+            const candlesDelta = Math.round(deltaX / pixelsPerCandle);
+            
+            scrollOffset = Math.max(0, Math.min(
+                candlestickData.length - candlesPerScreen,
+                dragStartOffset - candlesDelta
+            ));
+            
+            drawChart();
+        }
+
+        function endDrag() {
+            isDragging = false;
+            // Re-enable auto scroll if we're at the end
+            if (scrollOffset >= candlestickData.length - candlesPerScreen - 5) {
+                autoScroll = true;
+            }
+        }
+
+        function zoomIn() {
+            candlesPerScreen = Math.max(20, candlesPerScreen - 10);
+            updateZoomDisplay();
+            adjustScrollAfterZoom();
+            drawChart();
+        }
+
+        function zoomOut() {
+            candlesPerScreen = Math.min(500, candlesPerScreen + 10);
+            updateZoomDisplay();
+            adjustScrollAfterZoom();
+            drawChart();
+        }
+
+        function updateZoomDisplay() {
+            const zoomPercent = Math.round((100 / candlesPerScreen) * 100);
+            document.getElementById('zoomLevel').textContent = zoomPercent;
+        }
+
+        function adjustScrollAfterZoom() {
+            if (autoScroll) {
+                scrollOffset = Math.max(0, candlestickData.length - candlesPerScreen);
+            } else {
+                scrollOffset = Math.max(0, Math.min(
+                    candlestickData.length - candlesPerScreen,
+                    scrollOffset
+                ));
+            }
+        }
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            if (candlestickData.length > 0) {
+                drawChart();
+            }
+        }
+
+        function drawChart() {
+            if (!ctx || candlestickData.length === 0) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const chartWidth = canvas.width - chartPadding.left - chartPadding.right;
+            const chartHeight = canvas.height - chartPadding.top - chartPadding.bottom;
+
+            // Auto-scroll to newest candles if enabled
+            if (autoScroll) {
+                scrollOffset = Math.max(0, candlestickData.length - candlesPerScreen);
+            }
+
+            // Get visible candles
+            const endIndex = Math.min(candlestickData.length, scrollOffset + candlesPerScreen);
+            const startIndex = Math.max(0, endIndex - candlesPerScreen);
+            const visibleCandles = candlestickData.slice(startIndex, endIndex);
+
+            if (visibleCandles.length === 0) return;
+
+            // Calculate price range for visible candles
+            const allPrices = visibleCandles.flatMap(c => [c.h, c.l]);
+            const maxPrice = Math.max(...allPrices);
+            const minPrice = Math.min(...allPrices);
+            const priceRange = maxPrice - minPrice;
+            const padding = priceRange * 0.1;
+
+            const candleWidth = Math.max(2, Math.min(20, (chartWidth / visibleCandles.length) - 2));
+            const spacing = chartWidth / visibleCandles.length;
+
+            // Draw grid lines
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 5; i++) {
+                const y = chartPadding.top + (chartHeight / 5) * i;
+                ctx.beginPath();
+                ctx.moveTo(chartPadding.left, y);
+                ctx.lineTo(canvas.width - chartPadding.right, y);
+                ctx.stroke();
+
+                const price = maxPrice + padding - (priceRange + padding * 2) * (i / 5);
+                ctx.fillStyle = '#888';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText(price.toFixed(2), chartPadding.left - 10, y + 4);
+            }
+
+            // Draw candlesticks
+            visibleCandles.forEach((candle, index) => {
+                const x = chartPadding.left + spacing * index + spacing / 2;
+
+                const yHigh = chartPadding.top + ((maxPrice + padding - candle.h) / (priceRange + padding * 2)) * chartHeight;
+                const yLow = chartPadding.top + ((maxPrice + padding - candle.l) / (priceRange + padding * 2)) * chartHeight;
+                const yOpen = chartPadding.top + ((maxPrice + padding - candle.o) / (priceRange + padding * 2)) * chartHeight;
+                const yClose = chartPadding.top + ((maxPrice + padding - candle.c) / (priceRange + padding * 2)) * chartHeight;
+
+                const isUp = candle.c >= candle.o;
+                const color = isUp ? '#10b981' : '#ef4444';
+
+                // Draw wick
+                ctx.strokeStyle = color;
+                ctx.lineWidth = Math.max(1, candleWidth / 4);
+                ctx.beginPath();
+                ctx.moveTo(x, yHigh);
+                ctx.lineTo(x, yLow);
+                ctx.stroke();
+
+                // Draw body
+                ctx.fillStyle = color;
+                const bodyHeight = Math.max(Math.abs(yClose - yOpen), 1);
+                ctx.fillRect(x - candleWidth / 2, Math.min(yOpen, yClose), candleWidth, bodyHeight);
+            });
+
+            // Draw time labels
+            const maxLabels = Math.min(10, Math.floor(visibleCandles.length / 5));
+            const labelStep = Math.max(1, Math.floor(visibleCandles.length / maxLabels));
+            ctx.fillStyle = '#888';
+            ctx.font = '11px Arial';
+            ctx.textAlign = 'center';
+            visibleCandles.forEach((candle, index) => {
+                if (index % labelStep === 0 || index === visibleCandles.length - 1) {
+                    const x = chartPadding.left + spacing * index + spacing / 2;
+                    const date = new Date(candle.x);
+                    const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                    ctx.fillText(timeStr, x, canvas.height - chartPadding.bottom + 20);
+                }
+            });
+
+            // Draw title
+            const symbolName = document.getElementById('symbol').options[document.getElementById('symbol').selectedIndex].text;
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(symbolName, canvas.width / 2, 25);
+
+            // Draw scroll indicator if not at the end
+            if (!autoScroll && scrollOffset < candlestickData.length - candlesPerScreen - 2) {
+                ctx.fillStyle = 'rgba(255, 107, 53, 0.7)';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText('◄ Scroll to see live updates', canvas.width - chartPadding.right - 10, chartPadding.top + 20);
+            }
+        }
+
+        function connectWebSocket() {
+            const app_id = 1089;
+            ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${app_id}`);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                updateStatus('connected', '🟢 Connected to Deriv API');
+                
+                const tickRequest = {
+                    ticks: symbol,
+                    subscribe: 1
+                };
+                ws.send(JSON.stringify(tickRequest));
+
+                const historyRequest = {
+                    ticks_history: symbol,
+                    count: 1000,
+                    end: 'latest',
+                    style: 'candles',
+                    granularity: timeframe
+                };
+                ws.send(JSON.stringify(historyRequest));
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                if (data.error) {
+                    console.error('API Error:', data.error);
+                    updateStatus('disconnected', `🔴 Error: ${data.error.message}`);
+                    return;
+                }
+
+                if (data.msg_type === 'candles' && data.candles) {
+                    candlestickData = data.candles.map(c => ({
+                        x: c.epoch * 1000,
+                        o: parseFloat(c.open),
+                        h: parseFloat(c.high),
+                        l: parseFloat(c.low),
+                        c: parseFloat(c.close)
+                    }));
+
+                    if (candlestickData.length > 0) {
+                        currentCandle = { ...candlestickData[candlestickData.length - 1] };
+                    }
+
+                    drawChart();
+                    updateInfoBar();
+                } else if (data.msg_type === 'tick') {
+                    const price = parseFloat(data.tick.quote);
+                    const timestamp = data.tick.epoch * 1000;
+
+                    if (!currentCandle) {
+                        currentCandle = {
+                            x: Math.floor(timestamp / (timeframe * 1000)) * (timeframe * 1000),
+                            o: price,
+                            h: price,
+                            l: price,
+                            c: price
+                        };
+                        candlestickData.push(currentCandle);
+                    } else {
+                        const candleStart = Math.floor(timestamp / (timeframe * 1000)) * (timeframe * 1000);
+                        
+                        if (candleStart > currentCandle.x) {
+                            currentCandle = {
+                                x: candleStart,
+                                o: price,
+                                h: price,
+                                l: price,
+                                c: price
+                            };
+                            candlestickData.push(currentCandle);
+                            
+                            if (candlestickData.length > 1000) {
+                                candlestickData.shift();
+                                if (!autoScroll && scrollOffset > 0) {
+                                    scrollOffset--;
+                                }
+                            }
+                        } else {
+                            currentCandle.c = price;
+                            currentCandle.h = Math.max(currentCandle.h, price);
+                            currentCandle.l = Math.min(currentCandle.l, price);
+                            candlestickData[candlestickData.length - 1] = currentCandle;
+                        }
+                    }
+
+                    drawChart();
+                    updateInfoBar();
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                updateStatus('disconnected', '🔴 Connection error');
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket closed');
+                isConnected = false;
+                if (candlestickData.length > 0) {
+                    updateStatus('disconnected', '🔴 Disconnected - Click "Start" to reconnect');
+                }
+            };
+        }
+
+        function updateInfoBar() {
+            if (candlestickData.length === 0) return;
+
+            const currentCandle = candlestickData[candlestickData.length - 1];
+            const firstCandle = candlestickData[0];
+            
+            const currentPrice = currentCandle.c;
+            const openPrice = firstCandle.o;
+            const change = currentPrice - openPrice;
+            const changePercent = ((change / openPrice) * 100).toFixed(2);
+
+            document.getElementById('currentPrice').textContent = currentPrice.toFixed(2);
+            
+            const changeEl = document.getElementById('priceChange');
+            const changeClass = change >= 0 ? 'green' : 'red';
+            changeEl.innerHTML = `<span class="${changeClass}">${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePercent}%)</span>`;
+
+            const allPrices = candlestickData.flatMap(c => [c.h, c.l]);
+            const high = Math.max(...allPrices);
+            const low = Math.min(...allPrices);
+
+            document.getElementById('highPrice').textContent = high.toFixed(2);
+            document.getElementById('lowPrice').textContent = low.toFixed(2);
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+
+        function updateStatus(type, message) {
+            const statusEl = document.getElementById('status');
+            statusEl.className = `status ${type}`;
+            statusEl.textContent = message;
+        }
+
+        function startChart() {
+            symbol = document.getElementById('symbol').value;
+            timeframe = parseInt(document.getElementById('timeframe').value);
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+            }
+
+            candlestickData = [];
+            currentCandle = null;
+            scrollOffset = 0;
+            autoScroll = true;
+            
+            updateStatus('loading', '📡 Connecting to Deriv API...');
+            connectWebSocket();
+            isConnected = true;
+        }
+
+        document.getElementById('symbol').addEventListener('change', () => {
+            if (isConnected) {
+                startChart();
+            }
         });
-      };
-      ws.onmessage = (evt)=>{
-        const msg = JSON.parse(evt.data);
-        // handle ticks
-        if(msg.tick){
-          const t = msg.tick; // {epoch, quote, symbol}
-          const sym = t.symbol;
-          if(!state[sym]) return;
-          const item = {epoch: t.epoch, quote: Number(t.quote)};
-          const s = state[sym];
-          s.ticks.push(item);
-          s.lastTick = item;
-          // cap
-          if(s.ticks.length>MAX_TICKS) s.ticks.splice(0, s.ticks.length-MAX_TICKS);
-          // update UI
-          document.getElementById('last_'+sym).innerText = item.quote.toFixed(2) + '  ' + new Date(item.epoch*1000).toLocaleTimeString();
-          document.getElementById('status_'+sym).innerText = 'live';
-          document.getElementById('stat_'+sym).innerText = 'updated ' + new Date().toLocaleTimeString();
-          updateChartFor(sym);
-        }
-        if(msg.error) console.error('deriv error', msg.error);
-      };
-      ws.onclose = ()=>{connected=false; connectBtn.classList.remove('active'); connectBtn.innerText='Connect'; SYMBOLS.forEach(sym=>document.getElementById('status_'+sym).innerText='disconnected');};
-      ws.onerror = (e)=>{console.error('ws err',e)};
-    }
 
-    function disconnect(){ if(ws){ ws.close(); ws=null; connected=false; connectBtn.classList.remove('active'); connectBtn.innerText='Connect'; } }
+        document.getElementById('timeframe').addEventListener('change', () => {
+            if (isConnected) {
+                startChart();
+            }
+        });
 
-    // ====== Chart update loop ======
-    function updateChartFor(sym){
-      const s = state[sym];
-      if(!s.chart) return;
-      // if autoLive is true, scroll to real time after set
-      rebuildCandles(sym);
-      if(autoLive){
-        try{ s.chart.timeScale().scrollToRealTime(); }catch(e){}
-      }
-    }
-
-    // ====== Create all charts ======
-    Object.keys(state).forEach(sym=>{
-      const container = document.getElementById('chart_'+sym);
-      const chart = createChart(container);
-      state[sym].chart = chart;
-      // create empty series (line by default for tick)
-      state[sym].lineSeries = chart.addLineSeries({lineWidth:2});
-      // attach interaction listeners to pause auto live when user interacts
-      ['mousedown','wheel','touchstart'].forEach(ev=>{
-        container.addEventListener(ev, ()=>{ autoLive=false; liveBtn.classList.remove('active'); });
-      });
-      // double click to re-enable live
-      container.addEventListener('dblclick', ()=>{ autoLive=true; liveBtn.classList.add('active'); Object.values(state).forEach(s=>s.chart.timeScale().scrollToRealTime()); });
-    });
-
-    // ====== Buttons ======
-    connectBtn.addEventListener('click', ()=>{ if(!connected) connect(); else disconnect(); });
-    liveBtn.addEventListener('click', ()=>{ autoLive = true; liveBtn.classList.add('active'); Object.values(state).forEach(s=>{ try{s.chart.timeScale().scrollToRealTime()}catch(e){} }); });
-    pauseBtn.addEventListener('click', ()=>{ autoLive=false; liveBtn.classList.remove('active'); });
-
-    // timeframe buttons
-    document.querySelectorAll('[data-tf]').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        document.querySelectorAll('[data-tf]').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-        currentTF = btn.dataset.tf;
-        // rebuild all charts
-        Object.keys(state).forEach(sym=>rebuildCandles(sym));
-      });
-      if(btn.dataset.tf === DEFAULT_TF) btn.classList.add('active');
-    });
-
-    // automatically connect on load
-    window.addEventListener('load', ()=>{
-      // create small staggered connect to avoid bursts
-      connect();
-    });
-
-    // helper to fill demo data if needed (optional)
-    // Expose a simple API to add custom tick (for debugging)
-    window.__addTick = function(symbol, epoch, quote){
-      if(!state[symbol]) return;
-      state[symbol].ticks.push({epoch, quote});
-      if(state[symbol].ticks.length>MAX_TICKS) state[symbol].ticks.shift();
-      updateChartFor(symbol);
-    }
-
-    // small safety: reconnect on network close after a delay
-    setInterval(()=>{
-      if(!connected){ try{ connect(); }catch(e){} }
-    }, 10000);
-
-  </script>
+        initCanvas();
+        updateZoomDisplay();
+    </script>
 </body>
 </html>
