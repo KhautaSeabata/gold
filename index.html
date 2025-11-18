@@ -248,7 +248,7 @@
             const priceRange = maxPrice - minPrice;
             const padding = priceRange * 0.1;
 
-            const candleWidth = Math.max(4, chartWidth / candlestickData.length - 4);
+            const candleWidth = Math.max(2, Math.min(8, chartWidth / candlestickData.length - 1));
             const spacing = chartWidth / candlestickData.length;
 
             // Draw grid lines
@@ -294,13 +294,13 @@
                 ctx.fillRect(x - candleWidth / 2, Math.min(yOpen, yClose), candleWidth, bodyHeight);
             });
 
-            // Draw time labels
-            const labelStep = Math.ceil(candlestickData.length / 8);
+            // Draw time labels (show more labels for better orientation with 1000 candles)
+            const labelStep = Math.ceil(candlestickData.length / 10);
             ctx.fillStyle = '#888';
             ctx.font = '11px Arial';
             ctx.textAlign = 'center';
             candlestickData.forEach((candle, index) => {
-                if (index % labelStep === 0) {
+                if (index % labelStep === 0 || index === candlestickData.length - 1) {
                     const x = chartPadding.left + spacing * index + spacing / 2;
                     const date = new Date(candle.x);
                     const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -334,7 +334,7 @@
                 // Request historical data
                 const historyRequest = {
                     ticks_history: symbol,
-                    count: 50,
+                    count: 1000,
                     end: 'latest',
                     style: 'candles',
                     granularity: timeframe
@@ -395,7 +395,7 @@
                             };
                             candlestickData.push(currentCandle);
                             
-                            if (candlestickData.length > 50) {
+                            if (candlestickData.length > 1000) {
                                 candlestickData.shift();
                             }
                         } else {
