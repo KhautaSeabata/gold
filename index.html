@@ -62,17 +62,69 @@
             font-weight: bold;
             margin-top: 5px;
         }
+        .chart-wrapper {
+            position: relative;
+            margin-bottom: 20px;
+        }
         .chart-container {
             position: relative;
             height: 500px;
             background: #1a1a2e;
             border-radius: 10px;
-            margin-bottom: 20px;
             overflow: hidden;
+            cursor: grab;
+        }
+        .chart-container:active {
+            cursor: grabbing;
         }
         #chartCanvas {
             width: 100%;
             height: 100%;
+        }
+        .zoom-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 10;
+        }
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        .zoom-btn:hover {
+            background: white;
+            transform: scale(1.1);
+        }
+        .zoom-btn:active {
+            transform: scale(0.95);
+        }
+        .zoom-info {
+            width: 40px;
+            height: 30px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 11px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
         .controls {
             display: flex;
@@ -201,8 +253,15 @@
             </div>
         </div>
 
-        <div class="chart-container">
-            <canvas id="chartCanvas"></canvas>
+        <div class="chart-wrapper">
+            <div class="chart-container" id="chartContainer">
+                <canvas id="chartCanvas"></canvas>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomIn()">+</button>
+                    <div class="zoom-info" id="zoomLevel">100</div>
+                    <button class="zoom-btn" onclick="zoomOut()">−</button>
+                </div>
+            </div>
         </div>
 
         <div class="status loading" id="status">Click "Start Live Chart" to begin</div>
@@ -217,12 +276,111 @@
         let currentCandle = null;
         let chartPadding = { top: 40, right: 60, bottom: 40, left: 60 };
         let isConnected = false;
+        
+        // Zoom and scroll variables
+        let candlesPerScreen = 100;
+        let scrollOffset = 0;
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartOffset = 0;
+        let autoScroll = true;
 
         function initCanvas() {
             canvas = document.getElementById('chartCanvas');
             ctx = canvas.getContext('2d');
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
+            
+            // Add mouse/touch event listeners for scrolling
+            const container = document.getElementById('chartContainer');
+            
+            container.addEventListener('mousedown', startDrag);
+            container.addEventListener('mousemove', drag);
+            container.addEventListener('mouseup', endDrag);
+            container.addEventListener('mouseleave', endDrag);
+            
+            // Touch events for mobile
+            container.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                startDrag({ clientX: touch.clientX });
+                e.preventDefault();
+            });
+            container.addEventListener('touchmove', (e) => {
+                const touch = e.touches[0];
+                drag({ clientX: touch.clientX });
+                e.preventDefault();
+            });
+            container.addEventListener('touchend', endDrag);
+            
+            // Mouse wheel for zooming
+            container.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    zoomIn();
+                } else {
+                    zoomOut();
+                }
+            }, { passive: false });
+        }
+
+        function startDrag(e) {
+            isDragging = true;
+            dragStartX = e.clientX;
+            dragStartOffset = scrollOffset;
+            autoScroll = false;
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - dragStartX;
+            const pixelsPerCandle = (canvas.width - chartPadding.left - chartPadding.right) / candlesPerScreen;
+            const candlesDelta = Math.round(deltaX / pixelsPerCandle);
+            
+            scrollOffset = Math.max(0, Math.min(
+                candlestickData.length - candlesPerScreen,
+                dragStartOffset - candlesDelta
+            ));
+            
+            drawChart();
+        }
+
+        function endDrag() {
+            isDragging = false;
+            // Re-enable auto scroll if we're at the end
+            if (scrollOffset >= candlestickData.length - candlesPerScreen - 5) {
+                autoScroll = true;
+            }
+        }
+
+        function zoomIn() {
+            candlesPerScreen = Math.max(20, candlesPerScreen - 10);
+            updateZoomDisplay();
+            adjustScrollAfterZoom();
+            drawChart();
+        }
+
+        function zoomOut() {
+            candlesPerScreen = Math.min(500, candlesPerScreen + 10);
+            updateZoomDisplay();
+            adjustScrollAfterZoom();
+            drawChart();
+        }
+
+        function updateZoomDisplay() {
+            const zoomPercent = Math.round((100 / candlesPerScreen) * 100);
+            document.getElementById('zoomLevel').textContent = zoomPercent;
+        }
+
+        function adjustScrollAfterZoom() {
+            if (autoScroll) {
+                scrollOffset = Math.max(0, candlestickData.length - candlesPerScreen);
+            } else {
+                scrollOffset = Math.max(0, Math.min(
+                    candlestickData.length - candlesPerScreen,
+                    scrollOffset
+                ));
+            }
         }
 
         function resizeCanvas() {
@@ -242,14 +400,27 @@
             const chartWidth = canvas.width - chartPadding.left - chartPadding.right;
             const chartHeight = canvas.height - chartPadding.top - chartPadding.bottom;
 
-            const allPrices = candlestickData.flatMap(c => [c.h, c.l]);
+            // Auto-scroll to newest candles if enabled
+            if (autoScroll) {
+                scrollOffset = Math.max(0, candlestickData.length - candlesPerScreen);
+            }
+
+            // Get visible candles
+            const endIndex = Math.min(candlestickData.length, scrollOffset + candlesPerScreen);
+            const startIndex = Math.max(0, endIndex - candlesPerScreen);
+            const visibleCandles = candlestickData.slice(startIndex, endIndex);
+
+            if (visibleCandles.length === 0) return;
+
+            // Calculate price range for visible candles
+            const allPrices = visibleCandles.flatMap(c => [c.h, c.l]);
             const maxPrice = Math.max(...allPrices);
             const minPrice = Math.min(...allPrices);
             const priceRange = maxPrice - minPrice;
             const padding = priceRange * 0.1;
 
-            const candleWidth = Math.max(2, Math.min(8, chartWidth / candlestickData.length - 1));
-            const spacing = chartWidth / candlestickData.length;
+            const candleWidth = Math.max(2, Math.min(20, (chartWidth / visibleCandles.length) - 2));
+            const spacing = chartWidth / visibleCandles.length;
 
             // Draw grid lines
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
@@ -269,7 +440,7 @@
             }
 
             // Draw candlesticks
-            candlestickData.forEach((candle, index) => {
+            visibleCandles.forEach((candle, index) => {
                 const x = chartPadding.left + spacing * index + spacing / 2;
 
                 const yHigh = chartPadding.top + ((maxPrice + padding - candle.h) / (priceRange + padding * 2)) * chartHeight;
@@ -282,7 +453,7 @@
 
                 // Draw wick
                 ctx.strokeStyle = color;
-                ctx.lineWidth = 1;
+                ctx.lineWidth = Math.max(1, candleWidth / 4);
                 ctx.beginPath();
                 ctx.moveTo(x, yHigh);
                 ctx.lineTo(x, yLow);
@@ -294,13 +465,14 @@
                 ctx.fillRect(x - candleWidth / 2, Math.min(yOpen, yClose), candleWidth, bodyHeight);
             });
 
-            // Draw time labels (show more labels for better orientation with 1000 candles)
-            const labelStep = Math.ceil(candlestickData.length / 10);
+            // Draw time labels
+            const maxLabels = Math.min(10, Math.floor(visibleCandles.length / 5));
+            const labelStep = Math.max(1, Math.floor(visibleCandles.length / maxLabels));
             ctx.fillStyle = '#888';
             ctx.font = '11px Arial';
             ctx.textAlign = 'center';
-            candlestickData.forEach((candle, index) => {
-                if (index % labelStep === 0 || index === candlestickData.length - 1) {
+            visibleCandles.forEach((candle, index) => {
+                if (index % labelStep === 0 || index === visibleCandles.length - 1) {
                     const x = chartPadding.left + spacing * index + spacing / 2;
                     const date = new Date(candle.x);
                     const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -314,24 +486,30 @@
             ctx.font = 'bold 16px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(symbolName, canvas.width / 2, 25);
+
+            // Draw scroll indicator if not at the end
+            if (!autoScroll && scrollOffset < candlestickData.length - candlesPerScreen - 2) {
+                ctx.fillStyle = 'rgba(255, 107, 53, 0.7)';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText('◄ Scroll to see live updates', canvas.width - chartPadding.right - 10, chartPadding.top + 20);
+            }
         }
 
         function connectWebSocket() {
-            const app_id = 1089; // Demo app ID provided by Deriv
+            const app_id = 1089;
             ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${app_id}`);
 
             ws.onopen = () => {
                 console.log('WebSocket connected');
                 updateStatus('connected', '🟢 Connected to Deriv API');
                 
-                // Subscribe to ticks
                 const tickRequest = {
                     ticks: symbol,
                     subscribe: 1
                 };
                 ws.send(JSON.stringify(tickRequest));
 
-                // Request historical data
                 const historyRequest = {
                     ticks_history: symbol,
                     count: 1000,
@@ -352,7 +530,6 @@
                 }
 
                 if (data.msg_type === 'candles' && data.candles) {
-                    // Process historical candles
                     candlestickData = data.candles.map(c => ({
                         x: c.epoch * 1000,
                         o: parseFloat(c.open),
@@ -368,7 +545,6 @@
                     drawChart();
                     updateInfoBar();
                 } else if (data.msg_type === 'tick') {
-                    // Update current candle with live tick
                     const price = parseFloat(data.tick.quote);
                     const timestamp = data.tick.epoch * 1000;
 
@@ -385,7 +561,6 @@
                         const candleStart = Math.floor(timestamp / (timeframe * 1000)) * (timeframe * 1000);
                         
                         if (candleStart > currentCandle.x) {
-                            // New candle
                             currentCandle = {
                                 x: candleStart,
                                 o: price,
@@ -397,9 +572,11 @@
                             
                             if (candlestickData.length > 1000) {
                                 candlestickData.shift();
+                                if (!autoScroll && scrollOffset > 0) {
+                                    scrollOffset--;
+                                }
                             }
                         } else {
-                            // Update current candle
                             currentCandle.c = price;
                             currentCandle.h = Math.max(currentCandle.h, price);
                             currentCandle.l = Math.min(currentCandle.l, price);
@@ -468,6 +645,8 @@
 
             candlestickData = [];
             currentCandle = null;
+            scrollOffset = 0;
+            autoScroll = true;
             
             updateStatus('loading', '📡 Connecting to Deriv API...');
             connectWebSocket();
@@ -487,6 +666,7 @@
         });
 
         initCanvas();
+        updateZoomDisplay();
     </script>
 </body>
 </html>
