@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live XAUUSD Candlestick Chart</title>
+    <title>Deriv Volatility Indices - Live Candlestick Chart</title>
     <style>
         * {
             margin: 0;
@@ -12,7 +12,7 @@
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -33,12 +33,18 @@
             margin-bottom: 10px;
             font-size: 2.5em;
         }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
         .info-bar {
             display: flex;
             justify-content: space-around;
             margin-bottom: 20px;
             padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
             border-radius: 10px;
             color: white;
             flex-wrap: wrap;
@@ -82,7 +88,7 @@
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
             color: white;
             font-weight: bold;
             transition: transform 0.2s, box-shadow 0.2s;
@@ -98,13 +104,6 @@
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
-        }
-        input[type="text"] {
-            padding: 12px;
-            border-radius: 8px;
-            border: 2px solid #667eea;
-            width: 300px;
-            font-size: 16px;
         }
         .status {
             text-align: center;
@@ -148,23 +147,35 @@
 </head>
 <body>
     <div class="container">
-        <h1>📊 XAUUSD Live Candlestick Chart</h1>
+        <h1>📊 Deriv Volatility Indices</h1>
+        <div class="subtitle">Live Candlestick Chart - Real-time WebSocket Data</div>
         
         <div class="api-info">
-            <strong>🔑 Free API Key:</strong> Get yours from 
-            <a href="https://twelvedata.com/apikey" target="_blank">Twelve Data</a> (800 free requests/day)
+            <strong>🎯 No API Key Required!</strong> Connecting directly to Deriv's free WebSocket API
         </div>
 
         <div class="controls">
-            <input type="text" id="apiKey" placeholder="Enter your Twelve Data API key">
-            <button onclick="connectAPI()" id="connectBtn">Connect to Live Data</button>
-            <select id="timeframe">
-                <option value="1min">1 Minute</option>
-                <option value="5min" selected>5 Minutes</option>
-                <option value="15min">15 Minutes</option>
-                <option value="30min">30 Minutes</option>
-                <option value="60min">1 Hour</option>
+            <select id="symbol">
+                <option value="R_10">Volatility 10 Index</option>
+                <option value="R_25" selected>Volatility 25 Index</option>
+                <option value="R_50">Volatility 50 Index</option>
+                <option value="R_75">Volatility 75 Index</option>
+                <option value="R_100">Volatility 100 Index</option>
+                <option value="1HZ10V">Volatility 10 (1s) Index</option>
+                <option value="1HZ25V">Volatility 25 (1s) Index</option>
+                <option value="1HZ50V">Volatility 50 (1s) Index</option>
+                <option value="1HZ75V">Volatility 75 (1s) Index</option>
+                <option value="1HZ100V">Volatility 100 (1s) Index</option>
             </select>
+            <select id="timeframe">
+                <option value="60">1 Minute</option>
+                <option value="120">2 Minutes</option>
+                <option value="300" selected>5 Minutes</option>
+                <option value="900">15 Minutes</option>
+                <option value="1800">30 Minutes</option>
+                <option value="3600">1 Hour</option>
+            </select>
+            <button onclick="startChart()" id="startBtn">Start Live Chart</button>
         </div>
         
         <div class="info-bar">
@@ -194,17 +205,18 @@
             <canvas id="chartCanvas"></canvas>
         </div>
 
-        <div class="status loading" id="status">Enter your API key to get started</div>
+        <div class="status loading" id="status">Click "Start Live Chart" to begin</div>
     </div>
 
     <script>
         let canvas, ctx;
         let candlestickData = [];
-        let apiKey = '';
-        let timeframe = '5min';
-        let updateInterval;
-        let isConnected = false;
+        let ws;
+        let symbol = 'R_25';
+        let timeframe = 300;
+        let currentCandle = null;
         let chartPadding = { top: 40, right: 60, bottom: 40, left: 60 };
+        let isConnected = false;
 
         function initCanvas() {
             canvas = document.getElementById('chartCanvas');
@@ -253,7 +265,7 @@
                 ctx.fillStyle = '#888';
                 ctx.font = '12px Arial';
                 ctx.textAlign = 'right';
-                ctx.fillText('$' + price.toFixed(2), chartPadding.left - 10, y + 4);
+                ctx.fillText(price.toFixed(2), chartPadding.left - 10, y + 4);
             }
 
             // Draw candlesticks
@@ -297,75 +309,121 @@
             });
 
             // Draw title
+            const symbolName = document.getElementById('symbol').options[document.getElementById('symbol').selectedIndex].text;
             ctx.fillStyle = '#fff';
             ctx.font = 'bold 16px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('XAUUSD (Gold / US Dollar)', canvas.width / 2, 25);
+            ctx.fillText(symbolName, canvas.width / 2, 25);
         }
 
-        async function fetchHistoricalData() {
-            try {
-                updateStatus('loading', '📡 Fetching market data...');
-                document.getElementById('connectBtn').disabled = true;
+        function connectWebSocket() {
+            const app_id = 1089; // Demo app ID provided by Deriv
+            ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${app_id}`);
 
-                const url = `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${timeframe}&outputsize=50&apikey=${apiKey}`;
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                updateStatus('connected', '🟢 Connected to Deriv API');
                 
-                const response = await fetch(url);
-                const data = await response.json();
+                // Subscribe to ticks
+                const tickRequest = {
+                    ticks: symbol,
+                    subscribe: 1
+                };
+                ws.send(JSON.stringify(tickRequest));
 
-                if (data.status === 'error') {
-                    throw new Error(data.message || 'API Error');
+                // Request historical data
+                const historyRequest = {
+                    ticks_history: symbol,
+                    count: 50,
+                    end: 'latest',
+                    style: 'candles',
+                    granularity: timeframe
+                };
+                ws.send(JSON.stringify(historyRequest));
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                if (data.error) {
+                    console.error('API Error:', data.error);
+                    updateStatus('disconnected', `🔴 Error: ${data.error.message}`);
+                    return;
                 }
 
-                if (!data.values || data.values.length === 0) {
-                    throw new Error('No data returned. Check your API key or try again later.');
-                }
+                if (data.msg_type === 'candles' && data.candles) {
+                    // Process historical candles
+                    candlestickData = data.candles.map(c => ({
+                        x: c.epoch * 1000,
+                        o: parseFloat(c.open),
+                        h: parseFloat(c.high),
+                        l: parseFloat(c.low),
+                        c: parseFloat(c.close)
+                    }));
 
-                candlestickData = data.values.reverse().map(item => ({
-                    x: new Date(item.datetime).getTime(),
-                    o: parseFloat(item.open),
-                    h: parseFloat(item.high),
-                    l: parseFloat(item.low),
-                    c: parseFloat(item.close)
-                }));
+                    if (candlestickData.length > 0) {
+                        currentCandle = { ...candlestickData[candlestickData.length - 1] };
+                    }
 
-                drawChart();
-                updateInfoBar();
-                updateStatus('connected', '🟢 Connected - Live Data Active');
-                isConnected = true;
-                
-                return true;
-            } catch (error) {
-                console.error('Error:', error);
-                updateStatus('disconnected', `🔴 Error: ${error.message}`);
-                isConnected = false;
-                return false;
-            } finally {
-                document.getElementById('connectBtn').disabled = false;
-            }
-        }
+                    drawChart();
+                    updateInfoBar();
+                } else if (data.msg_type === 'tick') {
+                    // Update current candle with live tick
+                    const price = parseFloat(data.tick.quote);
+                    const timestamp = data.tick.epoch * 1000;
 
-        async function fetchLatestPrice() {
-            if (!isConnected) return;
-            
-            try {
-                const url = `https://api.twelvedata.com/price?symbol=XAU/USD&apikey=${apiKey}`;
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                if (data.price) {
-                    const price = parseFloat(data.price);
-                    const lastCandle = candlestickData[candlestickData.length - 1];
-                    lastCandle.c = price;
-                    lastCandle.h = Math.max(lastCandle.h, price);
-                    lastCandle.l = Math.min(lastCandle.l, price);
-                    
+                    if (!currentCandle) {
+                        currentCandle = {
+                            x: Math.floor(timestamp / (timeframe * 1000)) * (timeframe * 1000),
+                            o: price,
+                            h: price,
+                            l: price,
+                            c: price
+                        };
+                        candlestickData.push(currentCandle);
+                    } else {
+                        const candleStart = Math.floor(timestamp / (timeframe * 1000)) * (timeframe * 1000);
+                        
+                        if (candleStart > currentCandle.x) {
+                            // New candle
+                            currentCandle = {
+                                x: candleStart,
+                                o: price,
+                                h: price,
+                                l: price,
+                                c: price
+                            };
+                            candlestickData.push(currentCandle);
+                            
+                            if (candlestickData.length > 50) {
+                                candlestickData.shift();
+                            }
+                        } else {
+                            // Update current candle
+                            currentCandle.c = price;
+                            currentCandle.h = Math.max(currentCandle.h, price);
+                            currentCandle.l = Math.min(currentCandle.l, price);
+                            candlestickData[candlestickData.length - 1] = currentCandle;
+                        }
+                    }
+
                     drawChart();
                     updateInfoBar();
                 }
-            } catch (error) {
-                console.error('Error updating price:', error);
-            }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                updateStatus('disconnected', '🔴 Connection error');
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket closed');
+                isConnected = false;
+                if (candlestickData.length > 0) {
+                    updateStatus('disconnected', '🔴 Disconnected - Click "Start" to reconnect');
+                }
+            };
         }
 
         function updateInfoBar() {
@@ -379,18 +437,18 @@
             const change = currentPrice - openPrice;
             const changePercent = ((change / openPrice) * 100).toFixed(2);
 
-            document.getElementById('currentPrice').textContent = `$${currentPrice.toFixed(2)}`;
+            document.getElementById('currentPrice').textContent = currentPrice.toFixed(2);
             
             const changeEl = document.getElementById('priceChange');
             const changeClass = change >= 0 ? 'green' : 'red';
-            changeEl.innerHTML = `<span class="${changeClass}">${change >= 0 ? '+' : ''}$${change.toFixed(2)} (${changePercent}%)</span>`;
+            changeEl.innerHTML = `<span class="${changeClass}">${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePercent}%)</span>`;
 
             const allPrices = candlestickData.flatMap(c => [c.h, c.l]);
             const high = Math.max(...allPrices);
             const low = Math.min(...allPrices);
 
-            document.getElementById('highPrice').textContent = `$${high.toFixed(2)}`;
-            document.getElementById('lowPrice').textContent = `$${low.toFixed(2)}`;
+            document.getElementById('highPrice').textContent = high.toFixed(2);
+            document.getElementById('lowPrice').textContent = low.toFixed(2);
             document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
         }
 
@@ -400,36 +458,31 @@
             statusEl.textContent = message;
         }
 
-        async function connectAPI() {
-            const apiKeyInput = document.getElementById('apiKey').value.trim();
+        function startChart() {
+            symbol = document.getElementById('symbol').value;
+            timeframe = parseInt(document.getElementById('timeframe').value);
             
-            if (!apiKeyInput) {
-                alert('Please enter your Twelve Data API key');
-                return;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
             }
 
-            apiKey = apiKeyInput;
+            candlestickData = [];
+            currentCandle = null;
             
-            const success = await fetchHistoricalData();
-            
-            if (success) {
-                if (updateInterval) clearInterval(updateInterval);
-                
-                updateInterval = setInterval(fetchLatestPrice, 15000);
-                setInterval(fetchHistoricalData, 300000);
-            }
+            updateStatus('loading', '📡 Connecting to Deriv API...');
+            connectWebSocket();
+            isConnected = true;
         }
 
-        document.getElementById('timeframe').addEventListener('change', (e) => {
-            timeframe = e.target.value;
+        document.getElementById('symbol').addEventListener('change', () => {
             if (isConnected) {
-                fetchHistoricalData();
+                startChart();
             }
         });
 
-        document.getElementById('apiKey').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                connectAPI();
+        document.getElementById('timeframe').addEventListener('change', () => {
+            if (isConnected) {
+                startChart();
             }
         });
 
