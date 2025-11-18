@@ -3,593 +3,377 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XAUUSD Live Chart - MT5 Style</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/2.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <title>Live XAUUSD Candlestick Chart</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-chart-financial/0.2.1/chartjs-chart-financial.min.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1a1a1a;
-            color: #ffffff;
-            overflow-x: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #2c3e50, #3498db);
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        }
-
-        .symbol-info {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .symbol-name {
-            font-size: 24px;
-            font-weight: bold;
-            color: #f39c12;
-        }
-
-        .price-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: flex-end;
-        }
-
-        .current-price {
-            font-size: 28px;
-            font-weight: bold;
-            color: #2ecc71;
-        }
-
-        .price-change {
-            font-size: 14px;
-            display: flex;
-            gap: 10px;
-        }
-
-        .change-positive {
-            color: #2ecc71;
-        }
-
-        .change-negative {
-            color: #e74c3c;
-        }
-
-        .controls {
-            background: #2c3e50;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #34495e;
-        }
-
-        .timeframe-buttons {
-            display: flex;
-            gap: 5px;
-        }
-
-        .timeframe-btn {
-            background: #34495e;
-            color: #ecf0f1;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 12px;
-        }
-
-        .timeframe-btn:hover {
-            background: #4a6741;
-        }
-
-        .timeframe-btn.active {
-            background: #27ae60;
-            color: white;
-        }
-
-        .status-indicators {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #2ecc71;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        .chart-container {
-            height: calc(100vh - 140px);
-            background: #1e1e1e;
-            position: relative;
             padding: 20px;
         }
-
-        .market-info {
-            position: absolute;
-            top: 30px;
-            left: 30px;
-            background: rgba(44, 62, 80, 0.9);
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #f39c12;
-            z-index: 100;
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1400px;
+            width: 100%;
         }
-
-        .info-row {
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .info-bar {
             display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 12px;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            color: white;
+            flex-wrap: wrap;
         }
-
+        .info-item {
+            text-align: center;
+            padding: 5px 15px;
+        }
         .info-label {
-            color: #bdc3c7;
-            margin-right: 15px;
+            font-size: 0.9em;
+            opacity: 0.9;
         }
-
         .info-value {
-            color: #ecf0f1;
+            font-size: 1.3em;
             font-weight: bold;
+            margin-top: 5px;
         }
-
-        .loading {
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin-bottom: 20px;
+        }
+        .controls {
             display: flex;
             justify-content: center;
-            align-items: center;
-            height: 100%;
-            font-size: 18px;
-            color: #7f8c8d;
-        }
-
-        .spread-display {
-            background: #34495e;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-
-        .bid-ask {
-            display: flex;
             gap: 15px;
-            font-size: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
         }
-
-        .bid {
-            color: #e74c3c;
+        button, select {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
-
-        .ask {
-            color: #2ecc71;
+        button:hover, select:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
-
-        @media (max-width: 768px) {
-            .header {
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .symbol-name {
-                font-size: 20px;
-            }
-            
-            .current-price {
-                font-size: 24px;
-            }
-            
-            .market-info {
-                position: static;
-                margin-bottom: 10px;
-            }
-            
-            .chart-container {
-                padding: 10px;
-            }
+        button:active {
+            transform: translateY(0);
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .green { color: #10b981; }
+        .red { color: #ef4444; }
+        .api-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #1565c0;
+        }
+        .api-info a {
+            color: #0d47a1;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="symbol-info">
-            <div class="symbol-name">XAUUSD</div>
-            <div class="bid-ask">
-                <span class="bid">Bid: <span id="bid-price">0.00000</span></span>
-                <span class="ask">Ask: <span id="ask-price">0.00000</span></span>
-            </div>
-            <div class="spread-display">
-                Spread: <span id="spread-value">0.0</span> pips
-            </div>
+    <div class="container">
+        <h1>📊 XAUUSD Live Candlestick Chart</h1>
+        
+        <div class="api-info">
+            <strong>🔑 API Key Required:</strong> This chart uses real market data. 
+            Get your free API key from <a href="https://twelvedata.com/" target="_blank">Twelve Data</a> 
+            or <a href="https://www.alphavantage.co/" target="_blank">Alpha Vantage</a>
         </div>
-        <div class="price-display">
-            <div class="current-price" id="current-price">$0.00000</div>
-            <div class="price-change">
-                <span id="price-change-amount" class="change-positive">+$0.00</span>
-                <span id="price-change-percent" class="change-positive">(+0.00%)</span>
-            </div>
-        </div>
-    </div>
 
-    <div class="controls">
-        <div class="timeframe-buttons">
-            <button class="timeframe-btn" data-timeframe="1m">M1</button>
-            <button class="timeframe-btn" data-timeframe="5m">M5</button>
-            <button class="timeframe-btn active" data-timeframe="15m">M15</button>
-            <button class="timeframe-btn" data-timeframe="1h">H1</button>
-            <button class="timeframe-btn" data-timeframe="4h">H4</button>
-            <button class="timeframe-btn" data-timeframe="1d">D1</button>
+        <div class="controls">
+            <input type="text" id="apiKey" placeholder="Enter your API key" style="padding: 12px; border-radius: 8px; border: 2px solid #667eea; width: 300px;">
+            <button onclick="connectAPI()">Connect to API</button>
+            <select id="timeframe">
+                <option value="1min">1 Minute</option>
+                <option value="5min" selected>5 Minutes</option>
+                <option value="15min">15 Minutes</option>
+                <option value="30min">30 Minutes</option>
+                <option value="1h">1 Hour</option>
+            </select>
         </div>
-        <div class="status-indicators">
-            <div class="status-dot"></div>
-            <span>Live Market</span>
-            <span id="server-time"></span>
+        
+        <div class="info-bar">
+            <div class="info-item">
+                <div class="info-label">Current Price</div>
+                <div class="info-value" id="currentPrice">Loading...</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Change</div>
+                <div class="info-value" id="priceChange">-</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">High</div>
+                <div class="info-value" id="highPrice">-</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Low</div>
+                <div class="info-value" id="lowPrice">-</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Last Update</div>
+                <div class="info-value" id="lastUpdate">-</div>
+            </div>
         </div>
-    </div>
 
-    <div class="chart-container">
-        <div class="market-info">
-            <div class="info-row">
-                <span class="info-label">Open:</span>
-                <span class="info-value" id="session-open">$0.00000</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">High:</span>
-                <span class="info-value" id="session-high">$0.00000</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Low:</span>
-                <span class="info-value" id="session-low">$0.00000</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Volume:</span>
-                <span class="info-value" id="session-volume">0</span>
-            </div>
+        <div class="chart-container">
+            <canvas id="chart"></canvas>
         </div>
-        <canvas id="chart"></canvas>
+
+        <div class="status loading" id="status">Enter API key to connect to live data</div>
     </div>
 
     <script>
-        class XAUUSDChart {
-            constructor() {
-                this.chart = null;
-                this.currentTimeframe = '15m';
-                this.candlestickData = [];
-                this.currentPrice = 2650.00;
-                this.bidPrice = 2649.95;
-                this.askPrice = 2650.05;
-                this.sessionOpen = 2645.30;
-                this.sessionHigh = 2655.80;
-                this.sessionLow = 2642.10;
-                this.volume = 125847;
-                this.startPrice = 2650.00;
-                
-                this.initializeChart();
-                this.generateInitialData();
-                this.startLiveUpdates();
-                this.setupEventListeners();
-                this.updateServerTime();
-            }
+        let chart;
+        let candlestickData = [];
+        let apiKey = '';
+        let timeframe = '5min';
+        let updateInterval;
 
-            initializeChart() {
-                const ctx = document.getElementById('chart').getContext('2d');
-                
-                Chart.register({
-                    id: 'candlestick',
-                    beforeDatasetsDraw: (chart) => {
-                        const ctx = chart.ctx;
-                        chart.data.datasets.forEach((dataset, datasetIndex) => {
-                            if (dataset.type === 'candlestick') {
-                                const meta = chart.getDatasetMeta(datasetIndex);
-                                meta.data.forEach((candle, index) => {
-                                    const data = dataset.data[index];
-                                    if (!data) return;
-
-                                    const x = candle.x;
-                                    const yHigh = chart.scales.y.getPixelForValue(data.h);
-                                    const yLow = chart.scales.y.getPixelForValue(data.l);
-                                    const yOpen = chart.scales.y.getPixelForValue(data.o);
-                                    const yClose = chart.scales.y.getPixelForValue(data.c);
-
-                                    const candleWidth = 8;
-                                    const isGreen = data.c >= data.o;
-                                    
-                                    ctx.strokeStyle = isGreen ? '#2ecc71' : '#e74c3c';
-                                    ctx.fillStyle = isGreen ? '#2ecc71' : '#e74c3c';
-                                    ctx.lineWidth = 1;
-
-                                    // High-Low line
-                                    ctx.beginPath();
-                                    ctx.moveTo(x, yHigh);
-                                    ctx.lineTo(x, yLow);
-                                    ctx.stroke();
-
-                                    // Candle body
-                                    const bodyHeight = Math.abs(yClose - yOpen);
-                                    const bodyY = Math.min(yOpen, yClose);
-                                    
-                                    if (isGreen) {
-                                        ctx.strokeRect(x - candleWidth/2, bodyY, candleWidth, bodyHeight);
-                                    } else {
-                                        ctx.fillRect(x - candleWidth/2, bodyY, candleWidth, bodyHeight);
-                                    }
-                                });
+        function initChart() {
+            const ctx = document.getElementById('chart').getContext('2d');
+            
+            chart = new Chart(ctx, {
+                type: 'candlestick',
+                data: {
+                    datasets: [{
+                        label: 'XAUUSD',
+                        data: candlestickData
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: true,
+                            callbacks: {
+                                label: function(context) {
+                                    const point = context.raw;
+                                    return [
+                                        `Open: $${point.o.toFixed(2)}`,
+                                        `High: $${point.h.toFixed(2)}`,
+                                        `Low: $${point.l.toFixed(2)}`,
+                                        `Close: $${point.c.toFixed(2)}`
+                                    ];
+                                }
                             }
-                        });
-                    }
-                });
-
-                this.chart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        datasets: [{
-                            type: 'candlestick',
-                            label: 'XAUUSD',
-                            data: [],
-                            borderColor: '#3498db',
-                            backgroundColor: 'transparent',
-                        }]
+                        }
                     },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                mode: 'index',
-                                intersect: false,
-                                backgroundColor: 'rgba(44, 62, 80, 0.95)',
-                                titleColor: '#ecf0f1',
-                                bodyColor: '#ecf0f1',
-                                borderColor: '#3498db',
-                                borderWidth: 1,
-                                callbacks: {
-                                    label: function(context) {
-                                        const data = context.raw;
-                                        if (!data) return '';
-                                        return [
-                                            `Open: $${data.o.toFixed(2)}`,
-                                            `High: $${data.h.toFixed(2)}`,
-                                            `Low: $${data.l.toFixed(2)}`,
-                                            `Close: $${data.c.toFixed(2)}`
-                                        ];
-                                    }
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'minute',
+                                displayFormats: {
+                                    minute: 'HH:mm',
+                                    hour: 'HH:mm'
                                 }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
                             }
                         },
-                        interaction: {
-                            mode: 'index',
-                            intersect: false,
-                        },
-                        scales: {
-                            x: {
-                                type: 'time',
-                                time: {
-                                    unit: 'minute',
-                                    displayFormats: {
-                                        minute: 'HH:mm',
-                                        hour: 'HH:mm',
-                                        day: 'MMM dd'
-                                    }
-                                },
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.1)'
-                                },
-                                ticks: {
-                                    color: '#bdc3c7'
-                                }
+                        y: {
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
                             },
-                            y: {
-                                position: 'right',
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.1)'
-                                },
-                                ticks: {
-                                    color: '#bdc3c7',
-                                    callback: function(value) {
-                                        return '$' + value.toFixed(2);
-                                    }
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toFixed(2);
                                 }
                             }
                         }
                     }
-                });
-            }
+                }
+            });
+        }
 
-            generateInitialData() {
-                const now = new Date();
-                const timeframes = {
-                    '1m': 60000,
-                    '5m': 300000,
-                    '15m': 900000,
-                    '1h': 3600000,
-                    '4h': 14400000,
-                    '1d': 86400000
-                };
-
-                const interval = timeframes[this.currentTimeframe];
-                const candleCount = 100;
+        async function fetchHistoricalData() {
+            try {
+                updateStatus('loading', 'Fetching historical data...');
                 
-                this.candlestickData = [];
-                let currentTime = new Date(now.getTime() - (candleCount * interval));
-                let price = this.currentPrice - (Math.random() * 20 - 10);
+                // Twelve Data API endpoint
+                const url = `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${timeframe}&outputsize=50&apikey=${apiKey}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
 
-                for (let i = 0; i < candleCount; i++) {
-                    const open = price;
-                    const volatility = 0.5 + Math.random() * 2;
-                    const direction = Math.random() > 0.5 ? 1 : -1;
-                    
-                    const high = open + Math.random() * volatility;
-                    const low = open - Math.random() * volatility;
-                    const close = open + (direction * Math.random() * volatility * 0.8);
-                    
-                    this.candlestickData.push({
-                        x: new Date(currentTime),
-                        o: open,
-                        h: Math.max(open, high, close),
-                        l: Math.min(open, low, close),
-                        c: close
-                    });
-                    
-                    price = close;
-                    currentTime = new Date(currentTime.getTime() + interval);
+                if (data.status === 'error' || !data.values) {
+                    throw new Error(data.message || 'Failed to fetch data');
                 }
 
-                this.chart.data.datasets[0].data = this.candlestickData;
-                this.chart.update('none');
-            }
+                candlestickData = data.values.reverse().map(item => ({
+                    x: new Date(item.datetime).getTime(),
+                    o: parseFloat(item.open),
+                    h: parseFloat(item.high),
+                    l: parseFloat(item.low),
+                    c: parseFloat(item.close)
+                }));
 
-            startLiveUpdates() {
-                setInterval(() => {
-                    this.updatePrice();
-                    this.updateCandle();
-                    this.updateUI();
-                }, 1000);
-
-                setInterval(() => {
-                    this.addNewCandle();
-                }, this.getTimeframeMs());
-
-                setInterval(() => {
-                    this.updateServerTime();
-                }, 1000);
-            }
-
-            updatePrice() {
-                const volatility = 0.1;
-                const change = (Math.random() - 0.5) * volatility;
-                const marketTrend = Math.sin(Date.now() / 100000) * 0.5;
+                chart.data.datasets[0].data = candlestickData;
+                chart.update();
                 
-                this.currentPrice += change + marketTrend * 0.1;
-                this.bidPrice = this.currentPrice - 0.05;
-                this.askPrice = this.currentPrice + 0.05;
+                updateInfoBar();
+                updateStatus('connected', '🟢 Connected - Live Data Active');
                 
-                // Update session high/low
-                if (this.currentPrice > this.sessionHigh) {
-                    this.sessionHigh = this.currentPrice;
-                }
-                if (this.currentPrice < this.sessionLow) {
-                    this.sessionLow = this.currentPrice;
-                }
-                
-                this.volume += Math.floor(Math.random() * 100);
-            }
-
-            updateCandle() {
-                if (this.candlestickData.length > 0) {
-                    const lastCandle = this.candlestickData[this.candlestickData.length - 1];
-                    lastCandle.c = this.currentPrice;
-                    lastCandle.h = Math.max(lastCandle.h, this.currentPrice);
-                    lastCandle.l = Math.min(lastCandle.l, this.currentPrice);
-                    
-                    this.chart.update('none');
-                }
-            }
-
-            addNewCandle() {
-                const now = new Date();
-                const lastCandle = this.candlestickData[this.candlestickData.length - 1];
-                
-                this.candlestickData.push({
-                    x: now,
-                    o: lastCandle.c,
-                    h: lastCandle.c,
-                    l: lastCandle.c,
-                    c: lastCandle.c
-                });
-
-                // Keep only last 100 candles
-                if (this.candlestickData.length > 100) {
-                    this.candlestickData.shift();
-                }
-
-                this.chart.data.datasets[0].data = this.candlestickData;
-                this.chart.update('none');
-            }
-
-            updateUI() {
-                const priceChange = this.currentPrice - this.startPrice;
-                const priceChangePercent = (priceChange / this.startPrice) * 100;
-                
-                document.getElementById('current-price').textContent = `$${this.currentPrice.toFixed(2)}`;
-                document.getElementById('bid-price').textContent = this.bidPrice.toFixed(2);
-                document.getElementById('ask-price').textContent = this.askPrice.toFixed(2);
-                
-                const spread = ((this.askPrice - this.bidPrice) * 100).toFixed(1);
-                document.getElementById('spread-value').textContent = spread;
-                
-                const changeAmountEl = document.getElementById('price-change-amount');
-                const changePercentEl = document.getElementById('price-change-percent');
-                
-                changeAmountEl.textContent = `${priceChange >= 0 ? '+' : ''}$${priceChange.toFixed(2)}`;
-                changePercentEl.textContent = `(${priceChangePercent >= 0 ? '+' : ''}${priceChangePercent.toFixed(2)}%)`;
-                
-                const changeClass = priceChange >= 0 ? 'change-positive' : 'change-negative';
-                changeAmountEl.className = changeClass;
-                changePercentEl.className = changeClass;
-                
-                document.getElementById('session-open').textContent = `$${this.sessionOpen.toFixed(2)}`;
-                document.getElementById('session-high').textContent = `$${this.sessionHigh.toFixed(2)}`;
-                document.getElementById('session-low').textContent = `$${this.sessionLow.toFixed(2)}`;
-                document.getElementById('session-volume').textContent = this.volume.toLocaleString();
-            }
-
-            updateServerTime() {
-                const now = new Date();
-                document.getElementById('server-time').textContent = now.toLocaleTimeString();
-            }
-
-            getTimeframeMs() {
-                const timeframes = {
-                    '1m': 60000,
-                    '5m': 300000,
-                    '15m': 900000,
-                    '1h': 3600000,
-                    '4h': 14400000,
-                    '1d': 86400000
-                };
-                return timeframes[this.currentTimeframe];
-            }
-
-            setupEventListeners() {
-                document.querySelectorAll('.timeframe-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        document.querySelector('.timeframe-btn.active').classList.remove('active');
-                        btn.classList.add('active');
-                        this.currentTimeframe = btn.dataset.timeframe;
-                        this.generateInitialData();
-                    });
-                });
+                return true;
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                updateStatus('disconnected', `🔴 Error: ${error.message}`);
+                return false;
             }
         }
 
-        // Initialize the chart when the page loads
-        window.addEventListener('load', () => {
-            new XAUUSDChart();
+        async function fetchLatestPrice() {
+            try {
+                const url = `https://api.twelvedata.com/price?symbol=XAU/USD&apikey=${apiKey}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.price) {
+                    const price = parseFloat(data.price);
+                    const lastCandle = candlestickData[candlestickData.length - 1];
+                    
+                    if (lastCandle) {
+                        lastCandle.c = price;
+                        lastCandle.h = Math.max(lastCandle.h, price);
+                        lastCandle.l = Math.min(lastCandle.l, price);
+                        
+                        chart.update('none');
+                        updateInfoBar();
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching latest price:', error);
+            }
+        }
+
+        function updateInfoBar() {
+            if (candlestickData.length === 0) return;
+
+            const currentCandle = candlestickData[candlestickData.length - 1];
+            const firstCandle = candlestickData[0];
+            
+            const currentPrice = currentCandle.c;
+            const openPrice = firstCandle.o;
+            const change = currentPrice - openPrice;
+            const changePercent = ((change / openPrice) * 100).toFixed(2);
+
+            document.getElementById('currentPrice').textContent = `$${currentPrice.toFixed(2)}`;
+            
+            const changeEl = document.getElementById('priceChange');
+            changeEl.textContent = `${change >= 0 ? '+' : ''}$${change.toFixed(2)} (${changePercent}%)`;
+            changeEl.className = 'info-value ' + (change >= 0 ? 'green' : 'red');
+
+            const allPrices = candlestickData.flatMap(c => [c.h, c.l]);
+            const high = Math.max(...allPrices);
+            const low = Math.min(...allPrices);
+
+            document.getElementById('highPrice').textContent = `$${high.toFixed(2)}`;
+            document.getElementById('lowPrice').textContent = `$${low.toFixed(2)}`;
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+
+        function updateStatus(type, message) {
+            const statusEl = document.getElementById('status');
+            statusEl.className = `status ${type}`;
+            statusEl.textContent = message;
+        }
+
+        async function connectAPI() {
+            const apiKeyInput = document.getElementById('apiKey').value.trim();
+            
+            if (!apiKeyInput) {
+                alert('Please enter an API key');
+                return;
+            }
+
+            apiKey = apiKeyInput;
+            
+            const success = await fetchHistoricalData();
+            
+            if (success) {
+                if (updateInterval) clearInterval(updateInterval);
+                
+                // Update price every 10 seconds
+                updateInterval = setInterval(fetchLatestPrice, 10000);
+                
+                // Refresh full data every 5 minutes
+                setInterval(fetchHistoricalData, 300000);
+            }
+        }
+
+        document.getElementById('timeframe').addEventListener('change', (e) => {
+            timeframe = e.target.value;
+            if (apiKey) {
+                fetchHistoricalData();
+            }
         });
+
+        // Allow Enter key to connect
+        document.getElementById('apiKey').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                connectAPI();
+            }
+        });
+
+        initChart();
     </script>
 </body>
 </html>
