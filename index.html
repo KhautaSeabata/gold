@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deriv Volatility Indices - Live Candlestick Chart</title>
+    <title>Deriv Volatility Indices - Live Chart with Pattern Detection</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -195,12 +196,125 @@
         .api-info a:hover {
             text-decoration: underline;
         }
+
+        /* Pattern Detection Styles */
+        .pattern-section {
+            margin-top: 30px;
+            border-top: 3px solid #FF6B35;
+            padding-top: 20px;
+        }
+        .pattern-header {
+            text-align: center;
+            font-size: 1.8em;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .threejs-container {
+            height: 200px;
+            background: #1a1a2e;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .patterns-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .pattern-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            animation: slideIn 0.5s ease-out;
+        }
+        .pattern-card.bullish {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        .pattern-card.bearish {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        .pattern-card.neutral {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .pattern-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .pattern-timeframe {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7em;
+        }
+        .pattern-details {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .pattern-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+        }
+        .pattern-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        .pattern-value {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .confidence-bar {
+            margin-top: 10px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .confidence-fill {
+            height: 100%;
+            background: white;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+        .no-patterns {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 1.1em;
+        }
+        .pattern-toggle {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📊 Deriv Volatility Indices</h1>
-        <div class="subtitle">Live Candlestick Chart - Real-time WebSocket Data</div>
+        <div class="subtitle">Live Candlestick Chart with AI Pattern Detection</div>
         
         <div class="api-info">
             <strong>🎯 No API Key Required!</strong> Connecting directly to Deriv's free WebSocket API
@@ -228,6 +342,7 @@
                 <option value="3600">1 Hour</option>
             </select>
             <button onclick="startChart()" id="startBtn">Start Live Chart</button>
+            <button onclick="togglePatternDetection()" id="patternToggle" class="pattern-toggle">🔍 Enable Pattern Detection</button>
         </div>
         
         <div class="info-bar">
@@ -265,8 +380,18 @@
         </div>
 
         <div class="status loading" id="status">Click "Start Live Chart" to begin</div>
+
+        <!-- Pattern Detection Section -->
+        <div class="pattern-section" id="patternSection" style="display: none;">
+            <div class="pattern-header">🎯 Detected Chart Patterns & Trading Signals</div>
+            <div class="threejs-container" id="threejsContainer"></div>
+            <div class="patterns-container" id="patternsContainer">
+                <div class="no-patterns">Scanning for patterns... Start the chart to begin detection.</div>
+            </div>
+        </div>
     </div>
 
+    <script src="analyzer.js"></script>
     <script>
         let canvas, ctx;
         let candlestickData = [];
@@ -285,13 +410,16 @@
         let dragStartOffset = 0;
         let autoScroll = true;
 
+        // Pattern analyzer
+        let patternAnalyzer = null;
+        let patternDetectionEnabled = false;
+
         function initCanvas() {
             canvas = document.getElementById('chartCanvas');
             ctx = canvas.getContext('2d');
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
             
-            // Add mouse/touch event listeners for scrolling
             const container = document.getElementById('chartContainer');
             
             container.addEventListener('mousedown', startDrag);
@@ -299,7 +427,6 @@
             container.addEventListener('mouseup', endDrag);
             container.addEventListener('mouseleave', endDrag);
             
-            // Touch events for mobile
             container.addEventListener('touchstart', (e) => {
                 const touch = e.touches[0];
                 startDrag({ clientX: touch.clientX });
@@ -312,7 +439,6 @@
             });
             container.addEventListener('touchend', endDrag);
             
-            // Mouse wheel for zooming
             container.addEventListener('wheel', (e) => {
                 e.preventDefault();
                 if (e.deltaY < 0) {
@@ -347,7 +473,6 @@
 
         function endDrag() {
             isDragging = false;
-            // Re-enable auto scroll if we're at the end
             if (scrollOffset >= candlestickData.length - candlesPerScreen - 5) {
                 autoScroll = true;
             }
@@ -400,19 +525,16 @@
             const chartWidth = canvas.width - chartPadding.left - chartPadding.right;
             const chartHeight = canvas.height - chartPadding.top - chartPadding.bottom;
 
-            // Auto-scroll to newest candles if enabled
             if (autoScroll) {
                 scrollOffset = Math.max(0, candlestickData.length - candlesPerScreen);
             }
 
-            // Get visible candles
             const endIndex = Math.min(candlestickData.length, scrollOffset + candlesPerScreen);
             const startIndex = Math.max(0, endIndex - candlesPerScreen);
             const visibleCandles = candlestickData.slice(startIndex, endIndex);
 
             if (visibleCandles.length === 0) return;
 
-            // Calculate price range for visible candles
             const allPrices = visibleCandles.flatMap(c => [c.h, c.l]);
             const maxPrice = Math.max(...allPrices);
             const minPrice = Math.min(...allPrices);
@@ -422,7 +544,6 @@
             const candleWidth = Math.max(2, Math.min(20, (chartWidth / visibleCandles.length) - 2));
             const spacing = chartWidth / visibleCandles.length;
 
-            // Draw grid lines
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
             ctx.lineWidth = 1;
             for (let i = 0; i <= 5; i++) {
@@ -439,7 +560,6 @@
                 ctx.fillText(price.toFixed(2), chartPadding.left - 10, y + 4);
             }
 
-            // Draw candlesticks
             visibleCandles.forEach((candle, index) => {
                 const x = chartPadding.left + spacing * index + spacing / 2;
 
@@ -451,7 +571,6 @@
                 const isUp = candle.c >= candle.o;
                 const color = isUp ? '#10b981' : '#ef4444';
 
-                // Draw wick
                 ctx.strokeStyle = color;
                 ctx.lineWidth = Math.max(1, candleWidth / 4);
                 ctx.beginPath();
@@ -459,13 +578,11 @@
                 ctx.lineTo(x, yLow);
                 ctx.stroke();
 
-                // Draw body
                 ctx.fillStyle = color;
                 const bodyHeight = Math.max(Math.abs(yClose - yOpen), 1);
                 ctx.fillRect(x - candleWidth / 2, Math.min(yOpen, yClose), candleWidth, bodyHeight);
             });
 
-            // Draw time labels
             const maxLabels = Math.min(10, Math.floor(visibleCandles.length / 5));
             const labelStep = Math.max(1, Math.floor(visibleCandles.length / maxLabels));
             ctx.fillStyle = '#888';
@@ -480,14 +597,12 @@
                 }
             });
 
-            // Draw title
             const symbolName = document.getElementById('symbol').options[document.getElementById('symbol').selectedIndex].text;
             ctx.fillStyle = '#fff';
             ctx.font = 'bold 16px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(symbolName, canvas.width / 2, 25);
 
-            // Draw scroll indicator if not at the end
             if (!autoScroll && scrollOffset < candlestickData.length - candlesPerScreen - 2) {
                 ctx.fillStyle = 'rgba(255, 107, 53, 0.7)';
                 ctx.font = 'bold 12px Arial';
@@ -544,6 +659,11 @@
 
                     drawChart();
                     updateInfoBar();
+                    
+                    // Update pattern analyzer
+                    if (patternDetectionEnabled && patternAnalyzer) {
+                        patternAnalyzer.updateCandleData(candlestickData, timeframe);
+                    }
                 } else if (data.msg_type === 'tick') {
                     const price = parseFloat(data.tick.quote);
                     const timestamp = data.tick.epoch * 1000;
@@ -586,6 +706,11 @@
 
                     drawChart();
                     updateInfoBar();
+                    
+                    // Update pattern analyzer on timeframe close
+                    if (patternDetectionEnabled && patternAnalyzer) {
+                        patternAnalyzer.updateCandleData(candlestickData, timeframe);
+                    }
                 }
             };
 
@@ -652,6 +777,142 @@
             connectWebSocket();
             isConnected = true;
         }
+
+        function togglePatternDetection() {
+            patternDetectionEnabled = !patternDetectionEnabled;
+            const btn = document.getElementById('patternToggle');
+            const section = document.getElementById('patternSection');
+            
+            if (patternDetectionEnabled) {
+                btn.textContent = '🔍 Disable Pattern Detection';
+                btn.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                section.style.display = 'block';
+                
+                if (!patternAnalyzer) {
+                    patternAnalyzer = new PatternAnalyzer();
+                    const container = document.getElementById('threejsContainer');
+                    patternAnalyzer.initThreeJS(container);
+                    
+                    // Set up pattern notification callback
+                    window.onPatternDetected = function(pattern) {
+                        displayPattern(pattern);
+                    };
+                }
+                
+                // Start analyzing if chart is running
+                if (candlestickData.length > 0) {
+                    patternAnalyzer.updateCandleData(candlestickData, timeframe);
+                }
+            } else {
+                btn.textContent = '🔍 Enable Pattern Detection';
+                btn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                section.style.display = 'none';
+            }
+        }
+
+        function displayPattern(pattern) {
+            const container = document.getElementById('patternsContainer');
+            
+            // Remove "no patterns" message
+            if (container.querySelector('.no-patterns')) {
+                container.innerHTML = '';
+            }
+
+            // Create pattern card
+            const card = document.createElement('div');
+            card.className = `pattern-card ${pattern.bias}`;
+            card.innerHTML = `
+                <div class="pattern-name">
+                    ${getBiasIcon(pattern.bias)} ${pattern.name}
+                    <span class="pattern-timeframe">${getTimeframeLabel(pattern.timeframe)}</span>
+                </div>
+                <div class="pattern-details">
+                    <div class="pattern-row">
+                        <span class="pattern-label">Current Price</span>
+                        <span class="pattern-value">${pattern.currentPrice}</span>
+                    </div>
+                    <div class="pattern-row">
+                        <span class="pattern-label">Entry Price</span>
+                        <span class="pattern-value">${pattern.entry}</span>
+                    </div>
+                    <div class="pattern-row">
+                        <span class="pattern-label">Take Profit (TP)</span>
+                        <span class="pattern-value" style="color: #10b981;">▲ ${pattern.tp}</span>
+                    </div>
+                    <div class="pattern-row">
+                        <span class="pattern-label">Stop Loss (SL)</span>
+                        <span class="pattern-value" style="color: #ef4444;">▼ ${pattern.sl}</span>
+                    </div>
+                    <div class="pattern-row">
+                        <span class="pattern-label">Signal</span>
+                        <span class="pattern-value">${pattern.bias.toUpperCase()}</span>
+                    </div>
+                </div>
+                <div class="confidence-bar">
+                    <div class="confidence-fill" style="width: ${pattern.confidence}%"></div>
+                </div>
+                <div style="text-align: center; margin-top: 8px; font-size: 0.9em; opacity: 0.9;">
+                    Confidence: ${pattern.confidence}%
+                </div>
+            `;
+
+            // Add to container (prepend to show newest first)
+            container.insertBefore(card, container.firstChild);
+
+            // Keep only last 6 patterns displayed
+            while (container.children.length > 6) {
+                container.removeChild(container.lastChild);
+            }
+
+            // Play notification sound (optional)
+            playNotificationSound();
+        }
+
+        function getBiasIcon(bias) {
+            switch(bias) {
+                case 'bullish': return '📈';
+                case 'bearish': return '📉';
+                default: return '📊';
+            }
+        }
+
+        function getTimeframeLabel(tf) {
+            switch(tf) {
+                case 60: return '1M';
+                case 120: return '2M';
+                case 300: return '5M';
+                case 900: return '15M';
+                case 1800: return '30M';
+                case 3600: return '1H';
+                default: return `${tf}s`;
+            }
+        }
+
+        function playNotificationSound() {
+            // Create a simple beep sound
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        }
+
+        // Clean up old patterns periodically
+        setInterval(() => {
+            if (patternAnalyzer) {
+                patternAnalyzer.clearOldPatterns();
+            }
+        }, 60000); // Every minute
 
         document.getElementById('symbol').addEventListener('change', () => {
             if (isConnected) {
