@@ -7,11 +7,14 @@
 class PatternAnalyzer {
     constructor() {
         this.patterns = [];
-        this.activeTimeframes = [60, 120, 300]; // 1min, 2min, 5min in seconds
+        this.activeTimeframes = [60, 120, 300, 900, 1800, 3600]; // 1min, 2min, 5min in seconds
         this.candleData = {
             60: [],
             120: [],
-            300: []
+            300: [],
+            900: [],
+            1800: [],
+            3600: []
         };
         this.detectedPatterns = [];
         this.scene = null;
