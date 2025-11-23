@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deriv Volatility Indices - Live Chart with Pattern Detection</title>
+    <title>Deriv Pattern Analyzer - Auto Live with WhatsApp Alerts</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * {
@@ -257,6 +257,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
         }
         .pattern-timeframe {
             background: rgba(255, 255, 255, 0.2);
@@ -305,25 +306,56 @@
             color: #666;
             font-size: 1.1em;
         }
-        .pattern-toggle {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin-bottom: 20px;
+        .alert-badge {
+            background: #fbbf24;
+            color: #1a1a2e;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.7em;
+            font-weight: bold;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.9; }
+        }
+        .auto-live-indicator {
+            padding: 12px 24px;
+            background: rgba(16, 185, 129, 0.2);
+            border-radius: 8px;
+            color: #10b981;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .notification-info {
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 8px;
+            border: 2px solid rgba(16, 185, 129, 0.3);
+        }
+        .notification-info strong {
+            color: #10b981;
+            font-size: 1.1em;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📊 Deriv Volatility Indices</h1>
-        <div class="subtitle">Live Candlestick Chart with AI Pattern Detection</div>
+        <h1>📊 Deriv Pattern Analyzer</h1>
+        <div class="subtitle">Auto-Live Chart with AI Pattern Detection & WhatsApp Alerts</div>
         
         <div class="api-info">
-            <strong>🎯 No API Key Required!</strong> Connecting directly to Deriv's free WebSocket API
+            <strong>🎯 No API Key Required!</strong> Auto-connecting to Deriv's WebSocket API
         </div>
 
         <div class="controls">
             <select id="symbol">
-                <option value="R_10" selected >Volatility 10 Index</option>
-                <option value="R_25" >Volatility 25 Index</option>
+                <option value="R_10">Volatility 10 Index</option>
+                <option value="R_25" selected>Volatility 25 Index</option>
                 <option value="R_50">Volatility 50 Index</option>
                 <option value="R_75">Volatility 75 Index</option>
                 <option value="R_100">Volatility 100 Index</option>
@@ -334,15 +366,18 @@
                 <option value="1HZ100V">Volatility 100 (1s) Index</option>
             </select>
             <select id="timeframe">
-                <option value="60" selected >1 Minute</option>
+                <option value="60">1 Minute</option>
                 <option value="120">2 Minutes</option>
-                <option value="300" >5 Minutes</option>
+                <option value="300" selected>5 Minutes</option>
                 <option value="900">15 Minutes</option>
                 <option value="1800">30 Minutes</option>
                 <option value="3600">1 Hour</option>
             </select>
-            <button onclick="startChart()" id="startBtn">Start Live Chart</button>
-            <button onclick="togglePatternDetection()" id="patternToggle" class="pattern-toggle">🔍 Enable Pattern Detection</button>
+            <button onclick="stopChart()" id="stopBtn" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">⏸️ Stop Chart</button>
+            <div class="auto-live-indicator">
+                <span style="font-size: 1.2em;">🟢</span>
+                <span>Auto-Live Mode</span>
+            </div>
         </div>
         
         <div class="info-bar">
@@ -379,20 +414,551 @@
             </div>
         </div>
 
-        <div class="status loading" id="status">Click "Start Live Chart" to begin</div>
+        <div class="status loading" id="status">🚀 Auto-starting live chart...</div>
 
         <!-- Pattern Detection Section -->
-        <div class="pattern-section" id="patternSection" style="display: none;">
-            <div class="pattern-header">🎯 Detected Chart Patterns & Trading Signals</div>
+        <div class="pattern-section" id="patternSection">
+            <div class="pattern-header">🎯 Live Pattern Detection & Trading Signals</div>
+            <div class="notification-info">
+                <strong>📱 WhatsApp Alerts Enabled!</strong><br>
+                High confidence patterns (85%+) will trigger notifications to: <strong>+26659878360</strong>
+            </div>
             <div class="threejs-container" id="threejsContainer"></div>
             <div class="patterns-container" id="patternsContainer">
-                <div class="no-patterns">Scanning for patterns... Start the chart to begin detection.</div>
+                <div class="no-patterns">🔍 Scanning latest 50 candlesticks for patterns...</div>
             </div>
         </div>
     </div>
 
-    <script src="analyzer.js"></script>
     <script>
+        // ============================================
+        // CONFIGURATION
+        // ============================================
+        
+        const WHATSAPP_NUMBER = '+26659878360';
+        
+        // Replace this with your backend webhook URL for WhatsApp integration
+        // You can use services like:
+        // - Twilio: https://www.twilio.com/docs/whatsapp
+        // - WhatsApp Business API
+        // - MessageBird: https://www.messagebird.com/
+        // - Your own Node.js server with whatsapp-web.js
+        const WEBHOOK_URL = 'https://your-backend-server.com/api/send-whatsapp';
+        
+        // ============================================
+        // PATTERN ANALYZER CLASS (Embedded)
+        // ============================================
+        
+        class PatternAnalyzer {
+            constructor() {
+                this.patterns = [];
+                this.activeTimeframes = [60, 120, 300, 900, 1800, 3600];
+                this.candleData = {
+                    60: [], 120: [], 300: [], 900: [], 1800: [], 3600: []
+                };
+                this.detectedPatterns = [];
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.patternMeshes = [];
+            }
+
+            initThreeJS(container) {
+                const width = container.clientWidth;
+                const height = 200;
+
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x1a1a2e);
+                this.camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+                this.camera.position.z = 50;
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(width, height);
+                container.appendChild(this.renderer.domElement);
+
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                this.scene.add(ambientLight);
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+                directionalLight.position.set(0, 1, 1);
+                this.scene.add(directionalLight);
+
+                this.animate();
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                this.patternMeshes.forEach(mesh => {
+                    mesh.rotation.y += 0.005;
+                });
+                this.renderer.render(this.scene, this.camera);
+            }
+
+            updateCandleData(mainCandles, timeframe) {
+                if (!this.activeTimeframes.includes(timeframe)) return;
+                this.candleData[timeframe] = mainCandles.slice(-100);
+                this.detectPatterns(timeframe);
+            }
+
+            detectPatterns(timeframe) {
+                const candles = this.candleData[timeframe];
+                if (candles.length < 20) return;
+                const recentCandles = candles.slice(-50);
+                
+                this.detectTriangle(recentCandles, timeframe, 'symmetrical');
+                this.detectTriangle(recentCandles, timeframe, 'ascending');
+                this.detectTriangle(recentCandles, timeframe, 'descending');
+                this.detectHeadAndShoulders(recentCandles, timeframe, false);
+                this.detectHeadAndShoulders(recentCandles, timeframe, true);
+                this.detectDoubleTopBottom(recentCandles, timeframe, 'top');
+                this.detectDoubleTopBottom(recentCandles, timeframe, 'bottom');
+                this.detectWedge(recentCandles, timeframe, 'rising');
+                this.detectWedge(recentCandles, timeframe, 'falling');
+                this.detectFlag(recentCandles, timeframe, 'bull');
+                this.detectFlag(recentCandles, timeframe, 'bear');
+            }
+
+            detectTriangle(candles, timeframe, type) {
+                if (candles.length < 20) return null;
+                const highs = candles.map(c => c.h);
+                const lows = candles.map(c => c.l);
+                const peaks = this.findPeaks(highs);
+                const troughs = this.findTroughs(lows);
+                if (peaks.length < 2 || troughs.length < 2) return null;
+
+                const recentPeaks = peaks.slice(-3);
+                const recentTroughs = troughs.slice(-3);
+                const upperSlope = this.calculateSlope(recentPeaks.map((p, i) => [i, highs[p]]));
+                const lowerSlope = this.calculateSlope(recentTroughs.map((t, i) => [i, lows[t]]));
+
+                let isPattern = false;
+                let bias = 'neutral';
+
+                if (type === 'symmetrical' && upperSlope < -0.001 && lowerSlope > 0.001) {
+                    isPattern = true;
+                    bias = this.determineTrendBias(candles);
+                } else if (type === 'ascending' && Math.abs(upperSlope) < 0.002 && lowerSlope > 0.001) {
+                    isPattern = true;
+                    bias = 'bullish';
+                } else if (type === 'descending' && upperSlope < -0.001 && Math.abs(lowerSlope) < 0.002) {
+                    isPattern = true;
+                    bias = 'bearish';
+                }
+
+                if (isPattern) {
+                    const currentPrice = candles[candles.length - 1].c;
+                    const pattern = this.createPatternSignal(
+                        `${type.charAt(0).toUpperCase() + type.slice(1)} Triangle`,
+                        bias, currentPrice, timeframe, candles
+                    );
+                    this.addPattern(pattern);
+                }
+            }
+
+            detectHeadAndShoulders(candles, timeframe, inverse = false) {
+                if (candles.length < 25) return null;
+                const prices = inverse ? candles.map(c => c.l) : candles.map(c => c.h);
+                const extremes = inverse ? this.findTroughs(prices) : this.findPeaks(prices);
+                if (extremes.length < 5) return null;
+
+                const recent = extremes.slice(-5);
+                if (recent.length === 5) {
+                    const [ls, lh, head, rh, rs] = recent.map(i => prices[i]);
+                    const leftShoulderValid = Math.abs(ls - lh) < (head - ls) * 0.3;
+                    const rightShoulderValid = Math.abs(rs - rh) < (head - rs) * 0.3;
+                    const headHigher = inverse ? (head < ls && head < rs) : (head > ls && head > rs);
+                    const shouldersLevel = Math.abs(ls - rs) / ls < 0.02;
+
+                    if (leftShoulderValid && rightShoulderValid && headHigher && shouldersLevel) {
+                        const currentPrice = candles[candles.length - 1].c;
+                        const pattern = this.createPatternSignal(
+                            inverse ? 'Inverse Head and Shoulders' : 'Head and Shoulders',
+                            inverse ? 'bullish' : 'bearish',
+                            currentPrice, timeframe, candles
+                        );
+                        this.addPattern(pattern);
+                    }
+                }
+            }
+
+            detectDoubleTopBottom(candles, timeframe, type) {
+                if (candles.length < 20) return null;
+                const prices = type === 'top' ? candles.map(c => c.h) : candles.map(c => c.l);
+                const extremes = type === 'top' ? this.findPeaks(prices) : this.findTroughs(prices);
+                if (extremes.length < 2) return null;
+
+                const recent = extremes.slice(-2);
+                const [first, second] = recent.map(i => prices[i]);
+                const similarity = Math.abs(first - second) / first;
+                
+                if (similarity < 0.015) {
+                    const currentPrice = candles[candles.length - 1].c;
+                    const pattern = this.createPatternSignal(
+                        `Double ${type.charAt(0).toUpperCase() + type.slice(1)}`,
+                        type === 'top' ? 'bearish' : 'bullish',
+                        currentPrice, timeframe, candles
+                    );
+                    this.addPattern(pattern);
+                }
+            }
+
+            detectWedge(candles, timeframe, type) {
+                if (candles.length < 20) return null;
+                const highs = candles.map(c => c.h);
+                const lows = candles.map(c => c.l);
+                const peaks = this.findPeaks(highs);
+                const troughs = this.findTroughs(lows);
+                if (peaks.length < 2 || troughs.length < 2) return null;
+
+                const recentPeaks = peaks.slice(-3);
+                const recentTroughs = troughs.slice(-3);
+                const upperSlope = this.calculateSlope(recentPeaks.map((p, i) => [i, highs[p]]));
+                const lowerSlope = this.calculateSlope(recentTroughs.map((t, i) => [i, lows[t]]));
+
+                let isPattern = false;
+                let bias = 'neutral';
+
+                if (type === 'rising' && upperSlope > 0.001 && lowerSlope > 0.001 && lowerSlope > upperSlope) {
+                    isPattern = true;
+                    bias = 'bearish';
+                } else if (type === 'falling' && upperSlope < -0.001 && lowerSlope < -0.001 && upperSlope < lowerSlope) {
+                    isPattern = true;
+                    bias = 'bullish';
+                }
+
+                if (isPattern) {
+                    const currentPrice = candles[candles.length - 1].c;
+                    const pattern = this.createPatternSignal(
+                        `${type.charAt(0).toUpperCase() + type.slice(1)} Wedge`,
+                        bias, currentPrice, timeframe, candles
+                    );
+                    this.addPattern(pattern);
+                }
+            }
+
+            detectFlag(candles, timeframe, type) {
+                if (candles.length < 15) return null;
+                const recent = candles.slice(-15);
+                const pole = recent.slice(0, 5);
+                const flag = recent.slice(5);
+
+                const poleMove = type === 'bull' ? 
+                    (pole[4].c - pole[0].o) / pole[0].o :
+                    (pole[0].o - pole[4].c) / pole[0].o;
+
+                if (poleMove < 0.02) return null;
+
+                const flagRange = Math.max(...flag.map(c => c.h)) - Math.min(...flag.map(c => c.l));
+                const flagAvg = flag.reduce((sum, c) => sum + c.c, 0) / flag.length;
+                const consolidation = flagRange / flagAvg;
+
+                if (consolidation < 0.015) {
+                    const currentPrice = candles[candles.length - 1].c;
+                    const pattern = this.createPatternSignal(
+                        `${type === 'bull' ? 'Bull' : 'Bear'} Flag`,
+                        type === 'bull' ? 'bullish' : 'bearish',
+                        currentPrice, timeframe, candles
+                    );
+                    this.addPattern(pattern);
+                }
+            }
+
+            findPeaks(prices) {
+                const peaks = [];
+                for (let i = 2; i < prices.length - 2; i++) {
+                    if (prices[i] > prices[i - 1] && prices[i] > prices[i - 2] &&
+                        prices[i] > prices[i + 1] && prices[i] > prices[i + 2]) {
+                        peaks.push(i);
+                    }
+                }
+                return peaks;
+            }
+
+            findTroughs(prices) {
+                const troughs = [];
+                for (let i = 2; i < prices.length - 2; i++) {
+                    if (prices[i] < prices[i - 1] && prices[i] < prices[i - 2] &&
+                        prices[i] < prices[i + 1] && prices[i] < prices[i + 2]) {
+                        troughs.push(i);
+                    }
+                }
+                return troughs;
+            }
+
+            calculateSlope(points) {
+                if (points.length < 2) return 0;
+                const n = points.length;
+                const sumX = points.reduce((sum, p) => sum + p[0], 0);
+                const sumY = points.reduce((sum, p) => sum + p[1], 0);
+                const sumXY = points.reduce((sum, p) => sum + p[0] * p[1], 0);
+                const sumX2 = points.reduce((sum, p) => sum + p[0] * p[0], 0);
+                return (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            }
+
+            determineTrendBias(candles) {
+                const recent = candles.slice(-20);
+                const startPrice = recent[0].o;
+                const endPrice = recent[recent.length - 1].c;
+                return endPrice > startPrice ? 'bullish' : 'bearish';
+            }
+
+            createPatternSignal(patternName, bias, currentPrice, timeframe, candles) {
+                const atr = this.calculateATR(candles.slice(-14));
+                let entry, tp1, tp2, tp3, sl;
+
+                if (bias === 'bullish') {
+                    entry = currentPrice * 1.001;
+                    tp1 = entry + (atr * 1.5);
+                    tp2 = entry + (atr * 2.5);
+                    tp3 = entry + (atr * 3.5);
+                    sl = entry - (atr * 1);
+                } else if (bias === 'bearish') {
+                    entry = currentPrice * 0.999;
+                    tp1 = entry - (atr * 1.5);
+                    tp2 = entry - (atr * 2.5);
+                    tp3 = entry - (atr * 3.5);
+                    sl = entry + (atr * 1);
+                } else {
+                    entry = currentPrice;
+                    tp1 = currentPrice + (atr * 1.5);
+                    tp2 = currentPrice + (atr * 2.5);
+                    tp3 = currentPrice + (atr * 3.5);
+                    sl = currentPrice - (atr * 1.5);
+                }
+
+                return {
+                    id: Date.now() + Math.random(),
+                    name: patternName,
+                    bias: bias,
+                    timeframe: timeframe,
+                    entry: entry.toFixed(2),
+                    tp1: tp1.toFixed(2),
+                    tp2: tp2.toFixed(2),
+                    tp3: tp3.toFixed(2),
+                    sl: sl.toFixed(2),
+                    currentPrice: currentPrice.toFixed(2),
+                    confidence: this.calculateConfidence(candles, bias),
+                    timestamp: Date.now()
+                };
+            }
+
+            calculateATR(candles, period = 14) {
+                if (candles.length < period) return 0;
+                const trs = [];
+                for (let i = 1; i < candles.length; i++) {
+                    const tr = Math.max(
+                        candles[i].h - candles[i].l,
+                        Math.abs(candles[i].h - candles[i - 1].c),
+                        Math.abs(candles[i].l - candles[i - 1].c)
+                    );
+                    trs.push(tr);
+                }
+                return trs.slice(-period).reduce((sum, tr) => sum + tr, 0) / period;
+            }
+
+            calculateConfidence(candles, bias) {
+                const recent = candles.slice(-10);
+                let confirming = 0;
+                let momentum = 0;
+
+                for (let i = 1; i < recent.length; i++) {
+                    if (bias === 'bullish' && recent[i].c > recent[i - 1].c) confirming++;
+                    if (bias === 'bearish' && recent[i].c < recent[i - 1].c) confirming++;
+                }
+
+                const startPrice = recent[0].c;
+                const endPrice = recent[recent.length - 1].c;
+                momentum = Math.abs((endPrice - startPrice) / startPrice) * 100;
+
+                let confidence = (confirming / (recent.length - 1)) * 100;
+                if (momentum > 1) confidence += 5;
+                if (momentum > 2) confidence += 5;
+                
+                const atr = this.calculateATR(candles.slice(-14));
+                const volatilityFactor = (atr / endPrice) * 100;
+                if (volatilityFactor > 0.5 && volatilityFactor < 2) {
+                    confidence += 10;
+                }
+
+                return Math.min(100, Math.round(confidence));
+            }
+
+            addPattern(pattern) {
+                const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+                const existing = this.detectedPatterns.find(p => 
+                    p.name === pattern.name && 
+                    p.timeframe === pattern.timeframe && 
+                    p.timestamp > fiveMinutesAgo
+                );
+
+                if (!existing) {
+                    this.detectedPatterns.unshift(pattern);
+                    this.detectedPatterns = this.detectedPatterns.slice(0, 10);
+                    this.visualizePattern(pattern);
+                    this.notifyPattern(pattern);
+                    
+                    if (pattern.confidence >= 85) {
+                        this.sendHighConfidenceAlert(pattern);
+                    }
+                }
+            }
+
+            sendHighConfidenceAlert(pattern) {
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification('🎯 High Confidence Pattern!', {
+                        body: `${pattern.name} - ${pattern.bias.toUpperCase()} - ${pattern.confidence}%`,
+                        icon: '📊',
+                        tag: pattern.id
+                    });
+                }
+
+                if (window.sendWhatsAppNotification) {
+                    window.sendWhatsAppNotification(pattern);
+                }
+
+                console.log('🚨 HIGH CONFIDENCE ALERT:', pattern);
+            }
+
+            visualizePattern(pattern) {
+                const geometry = new THREE.IcosahedronGeometry(5, 0);
+                let color;
+                switch (pattern.bias) {
+                    case 'bullish': color = 0x10b981; break;
+                    case 'bearish': color = 0xef4444; break;
+                    default: color = 0xfbbf24;
+                }
+
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: color,
+                    emissive: color,
+                    emissiveIntensity: 0.3,
+                    transparent: true,
+                    opacity: 0.8
+                });
+
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(
+                    (Math.random() - 0.5) * 40,
+                    (Math.random() - 0.5) * 20,
+                    (Math.random() - 0.5) * 20
+                );
+
+                this.scene.add(mesh);
+                this.patternMeshes.push(mesh);
+
+                setTimeout(() => {
+                    this.scene.remove(mesh);
+                    this.patternMeshes = this.patternMeshes.filter(m => m !== mesh);
+                }, 10000);
+            }
+
+            notifyPattern(pattern) {
+                if (window.onPatternDetected) {
+                    window.onPatternDetected(pattern);
+                }
+            }
+
+            clearOldPatterns() {
+                const oneHourAgo = Date.now() - (60 * 60 * 1000);
+                this.detectedPatterns = this.detectedPatterns.filter(p => p.timestamp > oneHourAgo);
+            }
+        }
+
+        // ============================================
+        // WHATSAPP NOTIFICATION FUNCTION
+        // ============================================
+        
+        window.sendWhatsAppNotification = async function(pattern) {
+            const message = `🚨 *HIGH CONFIDENCE TRADING SIGNAL* 🚨
+
+📊 Pattern: *${pattern.name}*
+📈 Bias: *${pattern.bias.toUpperCase()}*
+⚡ Confidence: *${pattern.confidence}%*
+💰 Current Price: ${pattern.currentPrice}
+
+🎯 *Trading Setup:*
+📍 Entry: ${pattern.entry}
+🎯 TP1: ${pattern.tp1} (Conservative)
+🎯 TP2: ${pattern.tp2} (Moderate)
+🎯 TP3: ${pattern.tp3} (Aggressive)
+🛑 SL: ${pattern.sl}
+
+⏰ Time: ${new Date().toLocaleString()}
+📊 Timeframe: ${getTimeframeLabel(pattern.timeframe)}
+
+Trade wisely! 💪`;
+
+            console.log('📱 WhatsApp Message Ready:', message);
+
+            // Method 1: Using backend webhook (recommended)
+            try {
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        phone: WHATSAPP_NUMBER,
+                        message: message,
+                        pattern: pattern
+                    })
+                });
+                
+                if (response.ok) {
+                    console.log('✅ WhatsApp notification sent successfully');
+                    showNotificationToast('✅ WhatsApp alert sent!');
+                } else {
+                    console.error('❌ Failed to send WhatsApp notification');
+                    fallbackWhatsAppMethod(message);
+                }
+            } catch (error) {
+                console.error('❌ WhatsApp notification error:', error);
+                fallbackWhatsAppMethod(message);
+            }
+        };
+
+        function fallbackWhatsAppMethod(message) {
+            // Fallback: Generate WhatsApp Web link
+            const encodedMessage = encodeURIComponent(message);
+            const phoneNumber = WHATSAPP_NUMBER.replace(/[^0-9]/g, '');
+            const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+            
+            console.log('📱 WhatsApp URL generated:', whatsappUrl);
+            showNotificationToast('📱 Click to send WhatsApp alert', whatsappUrl);
+        }
+
+        function showNotificationToast(message, url = null) {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                color: white;
+                padding: 15px 25px;
+                border-radius: 10px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+                z-index: 10000;
+                font-weight: bold;
+                cursor: ${url ? 'pointer' : 'default'};
+                animation: slideInRight 0.3s ease-out;
+            `;
+            toast.textContent = message;
+            
+            if (url) {
+                toast.onclick = () => window.open(url, '_blank');
+            }
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideOutRight 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        // ============================================
+        // CHART VARIABLES
+        // ============================================
+        
         let canvas, ctx;
         let candlestickData = [];
         let ws;
@@ -402,7 +968,6 @@
         let chartPadding = { top: 40, right: 60, bottom: 40, left: 60 };
         let isConnected = false;
         
-        // Zoom and scroll variables
         let candlesPerScreen = 100;
         let scrollOffset = 0;
         let isDragging = false;
@@ -410,10 +975,13 @@
         let dragStartOffset = 0;
         let autoScroll = true;
 
-        // Pattern analyzer
         let patternAnalyzer = null;
-        let patternDetectionEnabled = false;
+        let patternDetectionEnabled = true;
 
+        // ============================================
+        // CANVAS INITIALIZATION
+        // ============================================
+        
         function initCanvas() {
             canvas = document.getElementById('chartCanvas');
             ctx = canvas.getContext('2d');
@@ -517,6 +1085,10 @@
             }
         }
 
+        // ============================================
+        // CHART DRAWING
+        // ============================================
+        
         function drawChart() {
             if (!ctx || candlestickData.length === 0) return;
 
@@ -544,6 +1116,7 @@
             const candleWidth = Math.max(2, Math.min(20, (chartWidth / visibleCandles.length) - 2));
             const spacing = chartWidth / visibleCandles.length;
 
+            // Grid lines
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
             ctx.lineWidth = 1;
             for (let i = 0; i <= 5; i++) {
@@ -560,6 +1133,7 @@
                 ctx.fillText(price.toFixed(2), chartPadding.left - 10, y + 4);
             }
 
+            // Draw candles
             visibleCandles.forEach((candle, index) => {
                 const x = chartPadding.left + spacing * index + spacing / 2;
 
@@ -583,6 +1157,7 @@
                 ctx.fillRect(x - candleWidth / 2, Math.min(yOpen, yClose), candleWidth, bodyHeight);
             });
 
+            // Time labels
             const maxLabels = Math.min(10, Math.floor(visibleCandles.length / 5));
             const labelStep = Math.max(1, Math.floor(visibleCandles.length / maxLabels));
             ctx.fillStyle = '#888';
@@ -597,12 +1172,14 @@
                 }
             });
 
+            // Title
             const symbolName = document.getElementById('symbol').options[document.getElementById('symbol').selectedIndex].text;
             ctx.fillStyle = '#fff';
             ctx.font = 'bold 16px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(symbolName, canvas.width / 2, 25);
 
+            // Scroll indicator
             if (!autoScroll && scrollOffset < candlestickData.length - candlesPerScreen - 2) {
                 ctx.fillStyle = 'rgba(255, 107, 53, 0.7)';
                 ctx.font = 'bold 12px Arial';
@@ -611,28 +1188,30 @@
             }
         }
 
+        // ============================================
+        // WEBSOCKET CONNECTION
+        // ============================================
+        
         function connectWebSocket() {
             const app_id = 1089;
             ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${app_id}`);
 
             ws.onopen = () => {
                 console.log('WebSocket connected');
-                updateStatus('connected', '🟢 Connected to Deriv API');
+                updateStatus('connected', '🟢 Connected & Live');
                 
-                const tickRequest = {
+                ws.send(JSON.stringify({
                     ticks: symbol,
                     subscribe: 1
-                };
-                ws.send(JSON.stringify(tickRequest));
+                }));
 
-                const historyRequest = {
+                ws.send(JSON.stringify({
                     ticks_history: symbol,
                     count: 1000,
                     end: 'latest',
                     style: 'candles',
                     granularity: timeframe
-                };
-                ws.send(JSON.stringify(historyRequest));
+                }));
             };
 
             ws.onmessage = (event) => {
@@ -660,7 +1239,6 @@
                     drawChart();
                     updateInfoBar();
                     
-                    // Update pattern analyzer
                     if (patternDetectionEnabled && patternAnalyzer) {
                         patternAnalyzer.updateCandleData(candlestickData, timeframe);
                     }
@@ -707,7 +1285,6 @@
                     drawChart();
                     updateInfoBar();
                     
-                    // Update pattern analyzer on timeframe close
                     if (patternDetectionEnabled && patternAnalyzer) {
                         patternAnalyzer.updateCandleData(candlestickData, timeframe);
                     }
@@ -723,11 +1300,15 @@
                 console.log('WebSocket closed');
                 isConnected = false;
                 if (candlestickData.length > 0) {
-                    updateStatus('disconnected', '🔴 Disconnected - Click "Start" to reconnect');
+                    updateStatus('disconnected', '🔴 Disconnected');
                 }
             };
         }
 
+        // ============================================
+        // UI UPDATES
+        // ============================================
+        
         function updateInfoBar() {
             if (candlestickData.length === 0) return;
 
@@ -760,6 +1341,10 @@
             statusEl.textContent = message;
         }
 
+        // ============================================
+        // CHART CONTROLS
+        // ============================================
+        
         function startChart() {
             symbol = document.getElementById('symbol').value;
             timeframe = parseInt(document.getElementById('timeframe').value);
@@ -773,58 +1358,50 @@
             scrollOffset = 0;
             autoScroll = true;
             
-            updateStatus('loading', '📡 Connecting to Deriv API...');
+            updateStatus('loading', '📡 Connecting...');
             connectWebSocket();
             isConnected = true;
-        }
 
-        function togglePatternDetection() {
-            patternDetectionEnabled = !patternDetectionEnabled;
-            const btn = document.getElementById('patternToggle');
-            const section = document.getElementById('patternSection');
-            
-            if (patternDetectionEnabled) {
-                btn.textContent = '🔍 Disable Pattern Detection';
-                btn.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-                section.style.display = 'block';
+            if (!patternAnalyzer) {
+                patternAnalyzer = new PatternAnalyzer();
+                const container = document.getElementById('threejsContainer');
+                patternAnalyzer.initThreeJS(container);
                 
-                if (!patternAnalyzer) {
-                    patternAnalyzer = new PatternAnalyzer();
-                    const container = document.getElementById('threejsContainer');
-                    patternAnalyzer.initThreeJS(container);
-                    
-                    // Set up pattern notification callback
-                    window.onPatternDetected = function(pattern) {
-                        displayPattern(pattern);
-                    };
-                }
-                
-                // Start analyzing if chart is running
-                if (candlestickData.length > 0) {
-                    patternAnalyzer.updateCandleData(candlestickData, timeframe);
-                }
-            } else {
-                btn.textContent = '🔍 Enable Pattern Detection';
-                btn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                section.style.display = 'none';
+                window.onPatternDetected = function(pattern) {
+                    displayPattern(pattern);
+                };
             }
         }
 
+        function stopChart() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+            }
+            isConnected = false;
+            updateStatus('disconnected', '⏸️ Chart stopped');
+        }
+
+        // ============================================
+        // PATTERN DISPLAY
+        // ============================================
+        
         function displayPattern(pattern) {
             const container = document.getElementById('patternsContainer');
             
-            // Remove "no patterns" message
             if (container.querySelector('.no-patterns')) {
                 container.innerHTML = '';
             }
 
-            // Create pattern card
+            const highConfBadge = pattern.confidence >= 85 ? 
+                `<span class="alert-badge">🔥 HIGH CONFIDENCE</span>` : '';
+
             const card = document.createElement('div');
             card.className = `pattern-card ${pattern.bias}`;
             card.innerHTML = `
                 <div class="pattern-name">
                     ${getBiasIcon(pattern.bias)} ${pattern.name}
                     <span class="pattern-timeframe">${getTimeframeLabel(pattern.timeframe)}</span>
+                    ${highConfBadge}
                 </div>
                 <div class="pattern-details">
                     <div class="pattern-row">
@@ -836,12 +1413,20 @@
                         <span class="pattern-value">${pattern.entry}</span>
                     </div>
                     <div class="pattern-row">
-                        <span class="pattern-label">Take Profit (TP)</span>
-                        <span class="pattern-value" style="color: #10b981;">▲ ${pattern.tp}</span>
+                        <span class="pattern-label">TP1 (Conservative)</span>
+                        <span class="pattern-value" style="color: #10b981;">🎯 ${pattern.tp1}</span>
                     </div>
                     <div class="pattern-row">
-                        <span class="pattern-label">Stop Loss (SL)</span>
-                        <span class="pattern-value" style="color: #ef4444;">▼ ${pattern.sl}</span>
+                        <span class="pattern-label">TP2 (Moderate)</span>
+                        <span class="pattern-value" style="color: #10b981;">🎯 ${pattern.tp2}</span>
+                    </div>
+                    <div class="pattern-row">
+                        <span class="pattern-label">TP3 (Aggressive)</span>
+                        <span class="pattern-value" style="color: #10b981;">🎯 ${pattern.tp3}</span>
+                    </div>
+                    <div class="pattern-row">
+                        <span class="pattern-label">Stop Loss</span>
+                        <span class="pattern-value" style="color: #ef4444;">🛑 ${pattern.sl}</span>
                     </div>
                     <div class="pattern-row">
                         <span class="pattern-label">Signal</span>
@@ -856,16 +1441,15 @@
                 </div>
             `;
 
-            // Add to container (prepend to show newest first)
             container.insertBefore(card, container.firstChild);
 
-            // Keep only last 6 patterns displayed
             while (container.children.length > 6) {
                 container.removeChild(container.lastChild);
             }
 
-            // Play notification sound (optional)
-            playNotificationSound();
+            if (pattern.confidence >= 85) {
+                playNotificationSound();
+            }
         }
 
         function getBiasIcon(bias) {
@@ -889,7 +1473,6 @@
         }
 
         function playNotificationSound() {
-            // Create a simple beep sound
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
@@ -907,13 +1490,10 @@
             oscillator.stop(audioContext.currentTime + 0.5);
         }
 
-        // Clean up old patterns periodically
-        setInterval(() => {
-            if (patternAnalyzer) {
-                patternAnalyzer.clearOldPatterns();
-            }
-        }, 60000); // Every minute
-
+        // ============================================
+        // EVENT LISTENERS & INITIALIZATION
+        // ============================================
+        
         document.getElementById('symbol').addEventListener('change', () => {
             if (isConnected) {
                 startChart();
@@ -926,8 +1506,31 @@
             }
         });
 
-        initCanvas();
-        updateZoomDisplay();
+        // Request notification permission
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    console.log('✅ Notifications enabled');
+                }
+            });
+        }
+
+        // Clean old patterns
+        setInterval(() => {
+            if (patternAnalyzer) {
+                patternAnalyzer.clearOldPatterns();
+            }
+        }, 60000);
+
+        // Auto-start on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                initCanvas();
+                updateZoomDisplay();
+                startChart();
+                console.log('🚀 Auto-started chart with pattern detection');
+            }, 500);
+        });
     </script>
 </body>
 </html>
