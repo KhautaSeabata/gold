@@ -1,13 +1,13 @@
 /**
  * Deriv Pattern Analyzer with Three.js Visualization
  * Detects chart patterns and provides trading signals
- * Works on 1, 2, and 5-minute timeframes
+ * Enhanced with 3 TP levels and high confidence alerts
  */
 
 class PatternAnalyzer {
     constructor() {
         this.patterns = [];
-        this.activeTimeframes = [60, 120, 300, 900, 1800, 3600]; // 1min, 2min, 5min in seconds
+        this.activeTimeframes = [60, 120, 300, 900, 1800, 3600]; // 1min, 2min, 5min, 15min, 30min, 1hr
         this.candleData = {
             60: [],
             120: [],
@@ -65,7 +65,8 @@ class PatternAnalyzer {
     updateCandleData(mainCandles, timeframe) {
         if (!this.activeTimeframes.includes(timeframe)) return;
 
-        this.candleData[timeframe] = mainCandles.slice(-100); // Keep last 100 candles
+        // Keep last 100 candles for analysis
+        this.candleData[timeframe] = mainCandles.slice(-100);
         this.detectPatterns(timeframe);
     }
 
@@ -74,6 +75,7 @@ class PatternAnalyzer {
         const candles = this.candleData[timeframe];
         if (candles.length < 20) return;
 
+        // Use latest 50 candles for pattern detection
         const recentCandles = candles.slice(-50);
         
         // Detect various patterns
@@ -88,6 +90,7 @@ class PatternAnalyzer {
         this.detectWedge(recentCandles, timeframe, 'falling');
         this.detectFlag(recentCandles, timeframe, 'bull');
         this.detectFlag(recentCandles, timeframe, 'bear');
+        this.detectChannels(recentCandles, timeframe);
     }
 
     // Symmetrical Triangle Detection
@@ -279,6 +282,51 @@ class PatternAnalyzer {
         }
     }
 
+    // Channel Detection
+    detectChannels(candles, timeframe) {
+        if (candles.length < 30) return null;
+
+        const highs = candles.map(c => c.h);
+        const lows = candles.map(c => c.l);
+        
+        const peaks = this.findPeaks(highs);
+        const troughs = this.findTroughs(lows);
+
+        if (peaks.length < 3 || troughs.length < 3) return null;
+
+        const recentPeaks = peaks.slice(-4);
+        const recentTroughs = troughs.slice(-4);
+
+        const upperSlope = this.calculateSlope(recentPeaks.map((p, i) => [i, highs[p]]));
+        const lowerSlope = this.calculateSlope(recentTroughs.map((t, i) => [i, lows[t]]));
+
+        // Parallel lines indicate a channel
+        const slopeDiff = Math.abs(upperSlope - lowerSlope);
+        
+        if (slopeDiff < 0.001) { // Slopes are similar (parallel)
+            let channelType = 'Horizontal Channel';
+            let bias = 'neutral';
+            
+            if (upperSlope > 0.002 && lowerSlope > 0.002) {
+                channelType = 'Ascending Channel';
+                bias = 'bullish';
+            } else if (upperSlope < -0.002 && lowerSlope < -0.002) {
+                channelType = 'Descending Channel';
+                bias = 'bearish';
+            }
+
+            const currentPrice = candles[candles.length - 1].c;
+            const pattern = this.createPatternSignal(
+                channelType,
+                bias,
+                currentPrice,
+                timeframe,
+                candles
+            );
+            this.addPattern(pattern);
+        }
+    }
+
     // Helper Functions
     findPeaks(prices) {
         const peaks = [];
@@ -323,23 +371,29 @@ class PatternAnalyzer {
     }
 
     createPatternSignal(patternName, bias, currentPrice, timeframe, candles, supportResistance = null) {
-        // Calculate entry, TP, and SL
+        // Calculate entry, TP, and SL with 3 TP levels
         const atr = this.calculateATR(candles.slice(-14));
         const volatility = atr / currentPrice;
 
-        let entry, tp, sl;
+        let entry, tp1, tp2, tp3, sl;
 
         if (bias === 'bullish') {
             entry = currentPrice * 1.001; // Slight breakout
-            tp = entry + (atr * 2);
+            tp1 = entry + (atr * 1.5);
+            tp2 = entry + (atr * 2.5);
+            tp3 = entry + (atr * 3.5);
             sl = entry - (atr * 1);
         } else if (bias === 'bearish') {
             entry = currentPrice * 0.999; // Slight breakdown
-            tp = entry - (atr * 2);
+            tp1 = entry - (atr * 1.5);
+            tp2 = entry - (atr * 2.5);
+            tp3 = entry - (atr * 3.5);
             sl = entry + (atr * 1);
         } else {
             entry = currentPrice;
-            tp = currentPrice + (atr * 1.5);
+            tp1 = currentPrice + (atr * 1.5);
+            tp2 = currentPrice + (atr * 2.5);
+            tp3 = currentPrice + (atr * 3.5);
             sl = currentPrice - (atr * 1.5);
         }
 
@@ -349,7 +403,9 @@ class PatternAnalyzer {
             bias: bias,
             timeframe: timeframe,
             entry: entry.toFixed(2),
-            tp: tp.toFixed(2),
+            tp1: tp1.toFixed(2),
+            tp2: tp2.toFixed(2),
+            tp3: tp3.toFixed(2),
             sl: sl.toFixed(2),
             currentPrice: currentPrice.toFixed(2),
             confidence: this.calculateConfidence(candles, bias),
@@ -375,16 +431,42 @@ class PatternAnalyzer {
     }
 
     calculateConfidence(candles, bias) {
-        // Simple confidence calculation based on trend strength
+        // Enhanced confidence calculation with multiple factors
         const recent = candles.slice(-10);
         let confirming = 0;
+        let volume = 0;
+        let momentum = 0;
 
+        // Trend confirmation
         for (let i = 1; i < recent.length; i++) {
             if (bias === 'bullish' && recent[i].c > recent[i - 1].c) confirming++;
             if (bias === 'bearish' && recent[i].c < recent[i - 1].c) confirming++;
+            
+            // Volume indicator (range as proxy)
+            const range = recent[i].h - recent[i].l;
+            volume += range;
         }
 
-        return Math.round((confirming / (recent.length - 1)) * 100);
+        // Momentum calculation
+        const startPrice = recent[0].c;
+        const endPrice = recent[recent.length - 1].c;
+        momentum = Math.abs((endPrice - startPrice) / startPrice) * 100;
+
+        // Base confidence from trend
+        let confidence = (confirming / (recent.length - 1)) * 100;
+        
+        // Boost confidence based on momentum
+        if (momentum > 1) confidence += 5;
+        if (momentum > 2) confidence += 5;
+        
+        // Pattern strength bonus
+        const atr = this.calculateATR(candles.slice(-14));
+        const volatilityFactor = (atr / endPrice) * 100;
+        if (volatilityFactor > 0.5 && volatilityFactor < 2) {
+            confidence += 10; // Good volatility range
+        }
+
+        return Math.min(100, Math.round(confidence));
     }
 
     addPattern(pattern) {
@@ -401,7 +483,31 @@ class PatternAnalyzer {
             this.detectedPatterns = this.detectedPatterns.slice(0, 10); // Keep last 10
             this.visualizePattern(pattern);
             this.notifyPattern(pattern);
+            
+            // Send notification if confidence is high
+            if (pattern.confidence >= 85) {
+                this.sendHighConfidenceAlert(pattern);
+            }
         }
+    }
+
+    sendHighConfidenceAlert(pattern) {
+        // Browser notification
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('🎯 High Confidence Pattern Detected!', {
+                body: `${pattern.name} - ${pattern.bias.toUpperCase()} - ${pattern.confidence}% confidence`,
+                icon: '📊',
+                tag: pattern.id
+            });
+        }
+
+        // Call WhatsApp notification function
+        if (window.sendWhatsAppNotification) {
+            window.sendWhatsAppNotification(pattern);
+        }
+
+        // Console log for debugging
+        console.log('🚨 HIGH CONFIDENCE ALERT:', pattern);
     }
 
     visualizePattern(pattern) {
