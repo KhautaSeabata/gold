@@ -329,6 +329,45 @@
             align-items: center;
             gap: 8px;
         }
+        .trendline-toggle {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .trendline-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .trendline-toggle.active {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        .trendline-info {
+            position: absolute;
+            top: 60px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 10;
+            max-width: 200px;
+        }
+        .trendline-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px 0;
+        }
+        .trendline-color {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+        }
         .notification-info {
             text-align: center;
             margin-bottom: 15px;
@@ -374,6 +413,7 @@
                 <option value="3600">1 Hour</option>
             </select>
             <button onclick="stopChart()" id="stopBtn" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">⏸️ Stop Chart</button>
+            <button onclick="toggleTrendlines()" id="trendlineToggle" class="trendline-toggle active">📈 Trendlines: ON</button>
             <div class="auto-live-indicator">
                 <span style="font-size: 1.2em;">🟢</span>
                 <span>Auto-Live Mode</span>
@@ -410,6 +450,10 @@
                     <button class="zoom-btn" onclick="zoomIn()">+</button>
                     <div class="zoom-info" id="zoomLevel">100</div>
                     <button class="zoom-btn" onclick="zoomOut()">−</button>
+                </div>
+                <div class="trendline-info" id="trendlineInfo" style="display: none;">
+                    <div style="font-weight: bold; margin-bottom: 5px;">📊 Active Trendlines</div>
+                    <div id="trendlineList"></div>
                 </div>
             </div>
         </div>
@@ -501,7 +545,7 @@
             detectPatterns(timeframe) {
                 const candles = this.candleData[timeframe];
                 if (candles.length < 20) return;
-                const recentCandles = candles.slice(-100);
+                const recentCandles = candles.slice(-50);
                 
                 this.detectTriangle(recentCandles, timeframe, 'symmetrical');
                 this.detectTriangle(recentCandles, timeframe, 'ascending');
@@ -550,6 +594,31 @@
                         bias, currentPrice, timeframe, candles
                     );
                     this.addPattern(pattern);
+
+                    // Draw trendlines for triangle
+                    const upperLine = recentPeaks.map(idx => ({
+                        x: candles[idx].x,
+                        y: highs[idx]
+                    }));
+                    const lowerLine = recentTroughs.map(idx => ({
+                        x: candles[idx].x,
+                        y: lows[idx]
+                    }));
+
+                    if (window.onTrendlineDetected) {
+                        window.onTrendlineDetected({
+                            points: upperLine,
+                            label: 'Resistance',
+                            color: '#ef4444',
+                            patternType: `triangle-upper-${type}`
+                        });
+                        window.onTrendlineDetected({
+                            points: lowerLine,
+                            label: 'Support',
+                            color: '#10b981',
+                            patternType: `triangle-lower-${type}`
+                        });
+                    }
                 }
             }
 
@@ -575,6 +644,35 @@
                             currentPrice, timeframe, candles
                         );
                         this.addPattern(pattern);
+
+                        // Draw neckline
+                        const necklinePrice = (prices[recent[1]] + prices[recent[3]]) / 2;
+                        const necklinePoints = [
+                            { x: candles[recent[1]].x, y: necklinePrice },
+                            { x: candles[recent[3]].x, y: necklinePrice },
+                            { x: candles[candles.length - 1].x, y: necklinePrice }
+                        ];
+
+                        if (window.onTrendlineDetected) {
+                            window.onTrendlineDetected({
+                                points: necklinePoints,
+                                label: 'Neckline',
+                                color: '#fbbf24',
+                                patternType: inverse ? 'inv-h&s-neckline' : 'h&s-neckline'
+                            });
+
+                            // Draw pattern outline
+                            const patternOutline = recent.map(idx => ({
+                                x: candles[idx].x,
+                                y: prices[idx]
+                            }));
+                            window.onTrendlineDetected({
+                                points: patternOutline,
+                                label: inverse ? 'Inv H&S' : 'H&S',
+                                color: inverse ? '#10b981' : '#ef4444',
+                                patternType: inverse ? 'inv-h&s-outline' : 'h&s-outline'
+                            });
+                        }
                     }
                 }
             }
@@ -597,6 +695,34 @@
                         currentPrice, timeframe, candles
                     );
                     this.addPattern(pattern);
+
+                    // Draw double top/bottom levels
+                    const level = (first + second) / 2;
+                    const levelPoints = [
+                        { x: candles[recent[0]].x, y: level },
+                        { x: candles[recent[1]].x, y: level }
+                    ];
+
+                    if (window.onTrendlineDetected) {
+                        window.onTrendlineDetected({
+                            points: levelPoints,
+                            label: type === 'top' ? 'Double Top' : 'Double Bottom',
+                            color: type === 'top' ? '#ef4444' : '#10b981',
+                            patternType: `double-${type}`
+                        });
+
+                        // Draw connecting line between peaks/troughs
+                        const connectingLine = recent.map(idx => ({
+                            x: candles[idx].x,
+                            y: prices[idx]
+                        }));
+                        window.onTrendlineDetected({
+                            points: connectingLine,
+                            label: '',
+                            color: type === 'top' ? '#ef4444' : '#10b981',
+                            patternType: `double-${type}-connect`
+                        });
+                    }
                 }
             }
 
@@ -631,6 +757,31 @@
                         bias, currentPrice, timeframe, candles
                     );
                     this.addPattern(pattern);
+
+                    // Draw wedge lines
+                    const upperLine = recentPeaks.map(idx => ({
+                        x: candles[idx].x,
+                        y: highs[idx]
+                    }));
+                    const lowerLine = recentTroughs.map(idx => ({
+                        x: candles[idx].x,
+                        y: lows[idx]
+                    }));
+
+                    if (window.onTrendlineDetected) {
+                        window.onTrendlineDetected({
+                            points: upperLine,
+                            label: 'Upper',
+                            color: '#f97316',
+                            patternType: `wedge-upper-${type}`
+                        });
+                        window.onTrendlineDetected({
+                            points: lowerLine,
+                            label: 'Lower',
+                            color: '#f97316',
+                            patternType: `wedge-lower-${type}`
+                        });
+                    }
                 }
             }
 
@@ -658,6 +809,38 @@
                         currentPrice, timeframe, candles
                     );
                     this.addPattern(pattern);
+
+                    // Draw pole line
+                    const polePoints = [
+                        { x: pole[0].x, y: pole[0].o },
+                        { x: pole[4].x, y: pole[4].c }
+                    ];
+
+                    // Draw flag consolidation box
+                    const flagHigh = Math.max(...flag.map(c => c.h));
+                    const flagLow = Math.min(...flag.map(c => c.l));
+                    const flagBox = [
+                        { x: flag[0].x, y: flagHigh },
+                        { x: flag[flag.length - 1].x, y: flagHigh },
+                        { x: flag[flag.length - 1].x, y: flagLow },
+                        { x: flag[0].x, y: flagLow },
+                        { x: flag[0].x, y: flagHigh }
+                    ];
+
+                    if (window.onTrendlineDetected) {
+                        window.onTrendlineDetected({
+                            points: polePoints,
+                            label: 'Pole',
+                            color: type === 'bull' ? '#10b981' : '#ef4444',
+                            patternType: `flag-pole-${type}`
+                        });
+                        window.onTrendlineDetected({
+                            points: flagBox,
+                            label: 'Flag',
+                            color: type === 'bull' ? '#10b981' : '#ef4444',
+                            patternType: `flag-box-${type}`
+                        });
+                    }
                 }
             }
 
@@ -1186,7 +1369,171 @@ Trade wisely! 💪`;
                 ctx.textAlign = 'right';
                 ctx.fillText('◄ Scroll to see live updates', canvas.width - chartPadding.right - 10, chartPadding.top + 20);
             }
+
+            // Draw trendlines
+            drawTrendlines(visibleCandles, chartPadding, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding, spacing);
         }
+
+        // ============================================
+        // TRENDLINE DRAWING
+        // ============================================
+        
+        function drawTrendlines(visibleCandles, chartPadding, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding, spacing) {
+            if (detectedTrendlines.length === 0 || !showTrendlines) return;
+
+            const now = Date.now();
+            
+            detectedTrendlines.forEach((trendline, index) => {
+                // Remove expired trendlines (older than 1 hour)
+                if (now - trendline.timestamp > 60 * 60 * 1000) {
+                    detectedTrendlines.splice(index, 1);
+                    return;
+                }
+
+                // Only draw trendlines that are visible in current view
+                const firstVisibleTime = visibleCandles[0].x;
+                const lastVisibleTime = visibleCandles[visibleCandles.length - 1].x;
+
+                // Check if trendline overlaps with visible area
+                const trendlineStart = trendline.points[0].x;
+                const trendlineEnd = trendline.points[trendline.points.length - 1].x;
+
+                if (trendlineEnd < firstVisibleTime || trendlineStart > lastVisibleTime) {
+                    return; // Trendline not in view
+                }
+
+                // Draw the trendline
+                ctx.save();
+                ctx.strokeStyle = trendline.color;
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([5, 5]);
+                ctx.globalAlpha = 0.85;
+
+                ctx.beginPath();
+                let firstPoint = true;
+
+                trendline.points.forEach((point, i) => {
+                    // Find the index in visible candles
+                    const candleIndex = visibleCandles.findIndex(c => Math.abs(c.x - point.x) < 30000);
+                    
+                    if (candleIndex !== -1) {
+                        const x = chartPadding.left + spacing * candleIndex + spacing / 2;
+                        const y = chartPadding.top + ((maxPrice + padding - point.y) / (priceRange + padding * 2)) * chartHeight;
+
+                        if (firstPoint) {
+                            ctx.moveTo(x, y);
+                            firstPoint = false;
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    }
+                });
+
+                ctx.stroke();
+
+                // Draw label at the end of the line
+                if (trendline.points.length > 0 && trendline.label) {
+                    const lastPoint = trendline.points[trendline.points.length - 1];
+                    const lastCandleIndex = visibleCandles.findIndex(c => Math.abs(c.x - lastPoint.x) < 30000);
+                    
+                    if (lastCandleIndex !== -1) {
+                        const labelX = chartPadding.left + spacing * lastCandleIndex + spacing / 2 + 10;
+                        const labelY = chartPadding.top + ((maxPrice + padding - lastPoint.y) / (priceRange + padding * 2)) * chartHeight;
+
+                        // Draw label background
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                        ctx.globalAlpha = 1;
+                        const textWidth = ctx.measureText(trendline.label).width;
+                        ctx.fillRect(labelX - 2, labelY - 15, textWidth + 8, 18);
+
+                        // Draw label text
+                        ctx.fillStyle = trendline.color;
+                        ctx.font = 'bold 11px Arial';
+                        ctx.textAlign = 'left';
+                        ctx.fillText(trendline.label, labelX + 2, labelY - 3);
+                    }
+                }
+
+                ctx.restore();
+            });
+
+            // Update trendline info panel
+            updateTrendlineInfo();
+        }
+
+        function updateTrendlineInfo() {
+            if (detectedTrendlines.length === 0 || !showTrendlines) {
+                document.getElementById('trendlineInfo').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('trendlineInfo').style.display = 'block';
+            const listEl = document.getElementById('trendlineList');
+            listEl.innerHTML = '';
+
+            detectedTrendlines.slice(0, 5).forEach(tl => {
+                if (tl.label) {
+                    const item = document.createElement('div');
+                    item.className = 'trendline-item';
+                    item.innerHTML = `
+                        <div class="trendline-color" style="background: ${tl.color};"></div>
+                        <span>${tl.label}</span>
+                    `;
+                    listEl.appendChild(item);
+                }
+            });
+        }
+
+        function addTrendline(points, label, color, patternType) {
+            // Remove old trendlines of the same type
+            detectedTrendlines = detectedTrendlines.filter(t => t.patternType !== patternType);
+
+            detectedTrendlines.push({
+                points: points,
+                label: label,
+                color: color,
+                patternType: patternType,
+                timestamp: Date.now()
+            });
+
+            // Keep only last 15 trendlines
+            if (detectedTrendlines.length > 15) {
+                detectedTrendlines.shift();
+            }
+
+            drawChart();
+        }
+
+        function toggleTrendlines() {
+            showTrendlines = !showTrendlines;
+            const btn = document.getElementById('trendlineToggle');
+            
+            if (showTrendlines) {
+                btn.textContent = '📈 Trendlines: ON';
+                btn.classList.add('active');
+            } else {
+                btn.textContent = '📈 Trendlines: OFF';
+                btn.classList.remove('active');
+                document.getElementById('trendlineInfo').style.display = 'none';
+            }
+            
+            drawChart();
+        }
+
+        function clearAllTrendlines() {
+            detectedTrendlines = [];
+            drawChart();
+        }
+
+        // Callback for pattern analyzer to add trendlines
+        window.onTrendlineDetected = function(trendlineData) {
+            addTrendline(
+                trendlineData.points,
+                trendlineData.label,
+                trendlineData.color,
+                trendlineData.patternType
+            );
+        };
 
         // ============================================
         // WEBSOCKET CONNECTION
