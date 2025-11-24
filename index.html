@@ -501,7 +501,7 @@
             detectPatterns(timeframe) {
                 const candles = this.candleData[timeframe];
                 if (candles.length < 20) return;
-                const recentCandles = candles.slice(-50);
+                const recentCandles = candles.slice(-100);
                 
                 this.detectTriangle(recentCandles, timeframe, 'symmetrical');
                 this.detectTriangle(recentCandles, timeframe, 'ascending');
