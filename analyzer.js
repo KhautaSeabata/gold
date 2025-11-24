@@ -137,6 +137,35 @@ class PatternAnalyzer {
                 candles
             );
             this.addPattern(pattern);
+
+            // Draw trendlines for triangle
+            this.drawTriangleTrendlines(candles, recentPeaks, recentTroughs, highs, lows, type);
+        }
+    }
+
+    drawTriangleTrendlines(candles, peaks, troughs, highs, lows, type) {
+        const upperLine = peaks.map(idx => ({
+            x: candles[idx].x,
+            y: highs[idx]
+        }));
+        const lowerLine = troughs.map(idx => ({
+            x: candles[idx].x,
+            y: lows[idx]
+        }));
+
+        if (window.onTrendlineDetected) {
+            window.onTrendlineDetected({
+                points: upperLine,
+                label: 'Resistance',
+                color: '#ef4444',
+                patternType: `triangle-upper-${type}`
+            });
+            window.onTrendlineDetected({
+                points: lowerLine,
+                label: 'Support',
+                color: '#10b981',
+                patternType: `triangle-lower-${type}`
+            });
         }
     }
 
