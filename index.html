@@ -1,4 +1,21 @@
-<!DOCTYPE html>
+updateCandleData(mainCandles, timeframe) {
+                if (!this.activeTimeframes.includes(timeframe)) return;
+
+                // Keep last 200 candles for analysis (analyze latest 140)
+                this.candleData[timeframe] = mainCandles.slice(-200);
+                this.detectPatterns(timeframe);
+            }
+
+            // Pattern Detection Functions
+            detectPatterns(timeframe) {
+                const candles = this.candleData[timeframe];
+                if (candles.length < 30) return;
+
+                // Use latest 140 candles for pattern detection
+                const recentCandles = candles.slice(-140);
+                
+                // Detect various patterns
+                this.detectTriangle(recentCandles, timeframe<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
