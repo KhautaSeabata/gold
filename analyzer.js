@@ -400,30 +400,29 @@ class PatternAnalyzer {
     }
 
     createPatternSignal(patternName, bias, currentPrice, timeframe, candles, supportResistance = null) {
-        // Calculate entry, TP, and SL with 3 TP levels
-        const atr = this.calculateATR(candles.slice(-14));
-        const volatility = atr / currentPrice;
-
+        // Calculate entry with 10, 20, and 30 pip TPs
+        const pipValue = 0.001; // 1 pip = 0.001 for most forex pairs
+        
         let entry, tp1, tp2, tp3, sl;
 
         if (bias === 'bullish') {
-            entry = currentPrice * 1.001; // Slight breakout
-            tp1 = entry + (atr * 1.5);
-            tp2 = entry + (atr * 2.5);
-            tp3 = entry + (atr * 3.5);
-            sl = entry - (atr * 1);
+            entry = currentPrice * 1.0001; // Slight breakout
+            tp1 = entry + (10 * pipValue);  // 10 pips
+            tp2 = entry + (20 * pipValue);  // 20 pips
+            tp3 = entry + (30 * pipValue);  // 30 pips
+            sl = entry - (15 * pipValue);   // 15 pips SL
         } else if (bias === 'bearish') {
-            entry = currentPrice * 0.999; // Slight breakdown
-            tp1 = entry - (atr * 1.5);
-            tp2 = entry - (atr * 2.5);
-            tp3 = entry - (atr * 3.5);
-            sl = entry + (atr * 1);
+            entry = currentPrice * 0.9999; // Slight breakdown
+            tp1 = entry - (10 * pipValue);  // 10 pips
+            tp2 = entry - (20 * pipValue);  // 20 pips
+            tp3 = entry - (30 * pipValue);  // 30 pips
+            sl = entry + (15 * pipValue);   // 15 pips SL
         } else {
             entry = currentPrice;
-            tp1 = currentPrice + (atr * 1.5);
-            tp2 = currentPrice + (atr * 2.5);
-            tp3 = currentPrice + (atr * 3.5);
-            sl = currentPrice - (atr * 1.5);
+            tp1 = currentPrice + (10 * pipValue);
+            tp2 = currentPrice + (20 * pipValue);
+            tp3 = currentPrice + (30 * pipValue);
+            sl = currentPrice - (15 * pipValue);
         }
 
         return {
@@ -431,15 +430,20 @@ class PatternAnalyzer {
             name: patternName,
             bias: bias,
             timeframe: timeframe,
-            entry: entry.toFixed(2),
-            tp1: tp1.toFixed(2),
-            tp2: tp2.toFixed(2),
-            tp3: tp3.toFixed(2),
-            sl: sl.toFixed(2),
-            currentPrice: currentPrice.toFixed(2),
+            entry: entry.toFixed(5),
+            tp1: tp1.toFixed(5),
+            tp2: tp2.toFixed(5),
+            tp3: tp3.toFixed(5),
+            sl: sl.toFixed(5),
+            currentPrice: currentPrice.toFixed(5),
             confidence: this.calculateConfidence(candles, bias),
             timestamp: Date.now(),
-            supportResistance: supportResistance
+            supportResistance: supportResistance,
+            status: 'active',
+            hitTP1: false,
+            hitTP2: false,
+            hitTP3: false,
+            hitSL: false
         };
     }
 
