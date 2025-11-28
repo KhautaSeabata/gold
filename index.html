@@ -1,21 +1,4 @@
-updateCandleData(mainCandles, timeframe) {
-                if (!this.activeTimeframes.includes(timeframe)) return;
-
-                // Keep last 200 candles for analysis (analyze latest 140)
-                this.candleData[timeframe] = mainCandles.slice(-200);
-                this.detectPatterns(timeframe);
-            }
-
-            // Pattern Detection Functions
-            detectPatterns(timeframe) {
-                const candles = this.candleData[timeframe];
-                if (candles.length < 30) return;
-
-                // Use latest 140 candles for pattern detection
-                const recentCandles = candles.slice(-140);
-                
-                // Detect various patterns
-                this.detectTriangle(recentCandles, timeframe<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -429,6 +412,8 @@ updateCandleData(mainCandles, timeframe) {
                 <option value="1800">30 Minutes</option>
                 <option value="3600">1 Hour</option>
             </select>
+            <button onclick="refreshChart()" id="refreshBtn" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">🔄 Refresh Chart</button>
+            <button onclick="clearAllSignals()" id="clearBtn" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">🗑️ Clear Signals</button>
             <button onclick="stopChart()" id="stopBtn" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">⏸️ Stop Chart</button>
             <button onclick="toggleTrendlines()" id="trendlineToggle" class="trendline-toggle active">📈 Trendlines: ON</button>
             <div class="auto-live-indicator">
@@ -482,11 +467,13 @@ updateCandleData(mainCandles, timeframe) {
             <div class="pattern-header">🎯 Live Pattern Detection & Trading Signals</div>
             <div class="notification-info">
                 <strong>📱 WhatsApp Alerts Enabled!</strong><br>
-                High confidence patterns (85%+) will trigger notifications to: <strong>+26659878360</strong>
+                High confidence patterns (85%+) will trigger notifications to: <strong>+26659878360</strong><br>
+                <span style="color: #6366f1; font-weight: bold;">🔥 Analyzing latest 140 candlesticks | TPs: 10, 20, 30 pips</span><br>
+                <span style="color: #10b981; font-size: 0.9em;">✅ Signals auto-saved to Firebase Database</span>
             </div>
             <div class="threejs-container" id="threejsContainer"></div>
             <div class="patterns-container" id="patternsContainer">
-                <div class="no-patterns">🔍 Scanning latest 50 candlesticks for patterns...</div>
+                <div class="no-patterns">🔍 Scanning latest 140 candlesticks for patterns...</div>
             </div>
         </div>
     </div>
@@ -498,14 +485,179 @@ updateCandleData(mainCandles, timeframe) {
         
         const WHATSAPP_NUMBER = '+26659878360';
         
+        // Firebase Realtime Database Configuration
+        const FIREBASE_DB_URL = 'https://alerts-83c9b-default-rtdb.firebaseio.com';
+        
         // Replace this with your backend webhook URL for WhatsApp integration
-        // You can use services like:
-        // - Twilio: https://www.twilio.com/docs/whatsapp
-        // - WhatsApp Business API
-        // - MessageBird: https://www.messagebird.com/
-        // - Your own Node.js server with whatsapp-web.js
         const WEBHOOK_URL = 'https://your-backend-server.com/api/send-whatsapp';
         
+        // ============================================
+        // FIREBASE DATABASE FUNCTIONS
+        // ============================================
+        
+        async function saveSignalToFirebase(signal) {
+            try {
+                const signalData = {
+                    ...signal,
+                    savedAt: new Date().toISOString(),
+                    symbol: symbol,
+                    id: signal.id.toString()
+                };
+
+                const response = await fetch(`${FIREBASE_DB_URL}/signals/${signal.id}.json`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(signalData)
+                });
+
+                if (response.ok) {
+                    console.log('✅ Signal saved to Firebase:', signal.name);
+                    return true;
+                } else {
+                    console.error('❌ Failed to save signal to Firebase');
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Firebase save error:', error);
+                return false;
+            }
+        }
+
+        async function updateSignalStatus(signalId, updates) {
+            try {
+                const response = await fetch(`${FIREBASE_DB_URL}/signals/${signalId}.json`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        ...updates,
+                        lastUpdated: new Date().toISOString()
+                    })
+                });
+
+                if (response.ok) {
+                    console.log('✅ Signal updated in Firebase:', signalId);
+                    return true;
+                }
+            } catch (error) {
+                console.error('❌ Firebase update error:', error);
+            }
+            return false;
+        }
+
+        async function loadSignalsFromFirebase() {
+            try {
+                const response = await fetch(`${FIREBASE_DB_URL}/signals.json`);
+                const data = await response.json();
+                
+                if (data) {
+                    const signals = Object.values(data);
+                    console.log('✅ Loaded signals from Firebase:', signals.length);
+                    return signals;
+                }
+                return [];
+            } catch (error) {
+                console.error('❌ Firebase load error:', error);
+                return [];
+            }
+        }
+
+        async function clearAllSignalsFromFirebase() {
+            try {
+                const response = await fetch(`${FIREBASE_DB_URL}/signals.json`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    console.log('✅ All signals cleared from Firebase');
+                    return true;
+                }
+            } catch (error) {
+                console.error('❌ Firebase clear error:', error);
+            }
+            return false;
+        }
+
+        async function trackSignalProgress(signal, currentPrice) {
+            const price = parseFloat(currentPrice);
+            const entry = parseFloat(signal.entry);
+            const tp1 = parseFloat(signal.tp1);
+            const tp2 = parseFloat(signal.tp2);
+            const tp3 = parseFloat(signal.tp3);
+            const sl = parseFloat(signal.sl);
+
+            let updates = {};
+            let shouldUpdate = false;
+
+            if (signal.bias === 'bullish') {
+                if (!signal.hitTP1 && price >= tp1) {
+                    updates.hitTP1 = true;
+                    shouldUpdate = true;
+                    showTrackingNotification('🎯 TP1 Hit!', signal.name);
+                }
+                if (!signal.hitTP2 && price >= tp2) {
+                    updates.hitTP2 = true;
+                    shouldUpdate = true;
+                    showTrackingNotification('🎯 TP2 Hit!', signal.name);
+                }
+                if (!signal.hitTP3 && price >= tp3) {
+                    updates.hitTP3 = true;
+                    updates.status = 'completed';
+                    shouldUpdate = true;
+                    showTrackingNotification('🎯 TP3 Hit! All TPs Complete!', signal.name);
+                }
+                if (!signal.hitSL && price <= sl) {
+                    updates.hitSL = true;
+                    updates.status = 'stopped';
+                    shouldUpdate = true;
+                    showTrackingNotification('🛑 Stop Loss Hit', signal.name);
+                }
+            } else if (signal.bias === 'bearish') {
+                if (!signal.hitTP1 && price <= tp1) {
+                    updates.hitTP1 = true;
+                    shouldUpdate = true;
+                    showTrackingNotification('🎯 TP1 Hit!', signal.name);
+                }
+                if (!signal.hitTP2 && price <= tp2) {
+                    updates.hitTP2 = true;
+                    shouldUpdate = true;
+                    showTrackingNotification('🎯 TP2 Hit!', signal.name);
+                }
+                if (!signal.hitTP3 && price <= tp3) {
+                    updates.hitTP3 = true;
+                    updates.status = 'completed';
+                    shouldUpdate = true;
+                    showTrackingNotification('🎯 TP3 Hit! All TPs Complete!', signal.name);
+                }
+                if (!signal.hitSL && price >= sl) {
+                    updates.hitSL = true;
+                    updates.status = 'stopped';
+                    shouldUpdate = true;
+                    showTrackingNotification('🛑 Stop Loss Hit', signal.name);
+                }
+            }
+
+            if (shouldUpdate) {
+                Object.assign(signal, updates);
+                await updateSignalStatus(signal.id, updates);
+            }
+        }
+
+        function showTrackingNotification(title, patternName) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(title, {
+                    body: patternName,
+                    icon: '🎯'
+                });
+            }
+            
+            showNotificationToast(`${title} - ${patternName}`);
+            playNotificationSound();
+        }
+
         // ============================================
         // PATTERN ANALYZER CLASS (Embedded)
         // ============================================
@@ -901,27 +1053,29 @@ updateCandleData(mainCandles, timeframe) {
             }
 
             createPatternSignal(patternName, bias, currentPrice, timeframe, candles) {
-                const atr = this.calculateATR(candles.slice(-14));
+                // Calculate entry with 10, 20, and 30 pip TPs
+                const pipValue = 0.001; // 1 pip = 0.001 for most forex pairs
+                
                 let entry, tp1, tp2, tp3, sl;
 
                 if (bias === 'bullish') {
-                    entry = currentPrice * 1.001;
-                    tp1 = entry + (atr * 1.5);
-                    tp2 = entry + (atr * 2.5);
-                    tp3 = entry + (atr * 3.5);
-                    sl = entry - (atr * 1);
+                    entry = currentPrice * 1.0001; // Slight breakout
+                    tp1 = entry + (10 * pipValue);  // 10 pips
+                    tp2 = entry + (20 * pipValue);  // 20 pips
+                    tp3 = entry + (30 * pipValue);  // 30 pips
+                    sl = entry - (15 * pipValue);   // 15 pips SL
                 } else if (bias === 'bearish') {
-                    entry = currentPrice * 0.999;
-                    tp1 = entry - (atr * 1.5);
-                    tp2 = entry - (atr * 2.5);
-                    tp3 = entry - (atr * 3.5);
-                    sl = entry + (atr * 1);
+                    entry = currentPrice * 0.9999; // Slight breakdown
+                    tp1 = entry - (10 * pipValue);  // 10 pips
+                    tp2 = entry - (20 * pipValue);  // 20 pips
+                    tp3 = entry - (30 * pipValue);  // 30 pips
+                    sl = entry + (15 * pipValue);   // 15 pips SL
                 } else {
                     entry = currentPrice;
-                    tp1 = currentPrice + (atr * 1.5);
-                    tp2 = currentPrice + (atr * 2.5);
-                    tp3 = currentPrice + (atr * 3.5);
-                    sl = currentPrice - (atr * 1.5);
+                    tp1 = currentPrice + (10 * pipValue);
+                    tp2 = currentPrice + (20 * pipValue);
+                    tp3 = currentPrice + (30 * pipValue);
+                    sl = currentPrice - (15 * pipValue);
                 }
 
                 return {
@@ -929,14 +1083,19 @@ updateCandleData(mainCandles, timeframe) {
                     name: patternName,
                     bias: bias,
                     timeframe: timeframe,
-                    entry: entry.toFixed(2),
-                    tp1: tp1.toFixed(2),
-                    tp2: tp2.toFixed(2),
-                    tp3: tp3.toFixed(2),
-                    sl: sl.toFixed(2),
-                    currentPrice: currentPrice.toFixed(2),
+                    entry: entry.toFixed(5),
+                    tp1: tp1.toFixed(5),
+                    tp2: tp2.toFixed(5),
+                    tp3: tp3.toFixed(5),
+                    sl: sl.toFixed(5),
+                    currentPrice: currentPrice.toFixed(5),
                     confidence: this.calculateConfidence(candles, bias),
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    status: 'active',
+                    hitTP1: false,
+                    hitTP2: false,
+                    hitTP3: false,
+                    hitSL: false
                 };
             }
 
@@ -1606,6 +1765,9 @@ Trade wisely! 💪`;
                     if (patternDetectionEnabled && patternAnalyzer) {
                         patternAnalyzer.updateCandleData(candlestickData, timeframe);
                     }
+                    
+                    // Track signal progress
+                    trackAllSignals();
                 } else if (data.msg_type === 'tick') {
                     const price = parseFloat(data.tick.quote);
                     const timestamp = data.tick.epoch * 1000;
@@ -1652,6 +1814,9 @@ Trade wisely! 💪`;
                     if (patternDetectionEnabled && patternAnalyzer) {
                         patternAnalyzer.updateCandleData(candlestickData, timeframe);
                     }
+                    
+                    // Track signal progress on every tick
+                    trackAllSignals();
                 }
             };
 
@@ -1737,12 +1902,79 @@ Trade wisely! 💪`;
             }
         }
 
+        function refreshChart() {
+            console.log('🔄 Refreshing chart...');
+            showNotificationToast('🔄 Refreshing chart and reloading data...');
+            
+            // Clear current data
+            candlestickData = [];
+            currentCandle = null;
+            scrollOffset = 0;
+            autoScroll = true;
+            
+            // Clear trendlines
+            detectedTrendlines = [];
+            
+            // Restart connection
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+            }
+            
+            setTimeout(() => {
+                startChart();
+                drawChart();
+            }, 500);
+        }
+
+        function clearAllSignals() {
+            if (confirm('Are you sure you want to clear all signals from the display and Firebase database?')) {
+                console.log('🗑️ Clearing all signals...');
+                
+                // Clear local display
+                const container = document.getElementById('patternsContainer');
+                container.innerHTML = '<div class="no-patterns">🔍 All signals cleared. Scanning for new patterns...</div>';
+                
+                // Clear stored patterns
+                allDetectedPatterns = [];
+                
+                // Clear trendlines
+                detectedTrendlines = [];
+                drawChart();
+                
+                // Clear from Firebase
+                clearAllSignalsFromFirebase().then(success => {
+                    if (success) {
+                        showNotificationToast('✅ All signals cleared from database');
+                    } else {
+                        showNotificationToast('⚠️ Failed to clear signals from database');
+                    }
+                });
+                
+                // Clear pattern analyzer's detected patterns
+                if (patternAnalyzer) {
+                    patternAnalyzer.detectedPatterns = [];
+                }
+            }
+        }
+
         function stopChart() {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.close();
             }
             isConnected = false;
             updateStatus('disconnected', '⏸️ Chart stopped');
+        }
+
+        function trackAllSignals() {
+            if (!candlestickData.length || !allDetectedPatterns.length) return;
+            
+            const currentPrice = candlestickData[candlestickData.length - 1].c;
+            
+            allDetectedPatterns.forEach(pattern => {
+                if (pattern.status === 'active') {
+                    trackSignalProgress(pattern, currentPrice);
+                }
+            });
         }
 
         // ============================================
@@ -1759,8 +1991,15 @@ Trade wisely! 💪`;
             const highConfBadge = pattern.confidence >= 85 ? 
                 `<span class="alert-badge">🔥 HIGH CONFIDENCE</span>` : '';
 
+            // Track pattern
+            allDetectedPatterns.push(pattern);
+            
+            // Save to Firebase
+            saveSignalToFirebase(pattern);
+
             const card = document.createElement('div');
             card.className = `pattern-card ${pattern.bias}`;
+            card.setAttribute('data-pattern-id', pattern.id);
             card.innerHTML = `
                 <div class="pattern-name">
                     ${getBiasIcon(pattern.bias)} ${pattern.name}
@@ -1776,43 +2015,73 @@ Trade wisely! 💪`;
                         <span class="pattern-label">Entry Price</span>
                         <span class="pattern-value">${pattern.entry}</span>
                     </div>
-                    <div class="pattern-row">
-                        <span class="pattern-label">TP1 (Conservative)</span>
+                    <div class="pattern-row" data-tp="tp1">
+                        <span class="pattern-label">TP1 (10 pips)</span>
                         <span class="pattern-value" style="color: #10b981;">🎯 ${pattern.tp1}</span>
                     </div>
-                    <div class="pattern-row">
-                        <span class="pattern-label">TP2 (Moderate)</span>
+                    <div class="pattern-row" data-tp="tp2">
+                        <span class="pattern-label">TP2 (20 pips)</span>
                         <span class="pattern-value" style="color: #10b981;">🎯 ${pattern.tp2}</span>
                     </div>
-                    <div class="pattern-row">
-                        <span class="pattern-label">TP3 (Aggressive)</span>
+                    <div class="pattern-row" data-tp="tp3">
+                        <span class="pattern-label">TP3 (30 pips)</span>
                         <span class="pattern-value" style="color: #10b981;">🎯 ${pattern.tp3}</span>
                     </div>
                     <div class="pattern-row">
-                        <span class="pattern-label">Stop Loss</span>
+                        <span class="pattern-label">Stop Loss (15 pips)</span>
                         <span class="pattern-value" style="color: #ef4444;">🛑 ${pattern.sl}</span>
                     </div>
                     <div class="pattern-row">
                         <span class="pattern-label">Signal</span>
                         <span class="pattern-value">${pattern.bias.toUpperCase()}</span>
                     </div>
+                    <div class="pattern-row" style="background: rgba(100, 116, 139, 0.2);">
+                        <span class="pattern-label">Status</span>
+                        <span class="pattern-value" id="status-${pattern.id}">⏳ Active</span>
+                    </div>
                 </div>
                 <div class="confidence-bar">
                     <div class="confidence-fill" style="width: ${pattern.confidence}%"></div>
                 </div>
                 <div style="text-align: center; margin-top: 8px; font-size: 0.9em; opacity: 0.9;">
-                    Confidence: ${pattern.confidence}%
+                    Confidence: ${pattern.confidence}% | ID: ${pattern.id.toString().slice(0, 8)}
                 </div>
             `;
 
             container.insertBefore(card, container.firstChild);
 
-            while (container.children.length > 6) {
+            while (container.children.length > 10) {
                 container.removeChild(container.lastChild);
             }
 
             if (pattern.confidence >= 85) {
                 playNotificationSound();
+            }
+            
+            // Update card status when TP/SL hit
+            updatePatternCardStatus(pattern);
+        }
+
+        function updatePatternCardStatus(pattern) {
+            const card = document.querySelector(`[data-pattern-id="${pattern.id}"]`);
+            if (!card) return;
+
+            const statusEl = card.querySelector(`#status-${pattern.id}`);
+            
+            if (pattern.hitSL) {
+                if (statusEl) statusEl.innerHTML = '🛑 Stop Loss Hit';
+                card.style.opacity = '0.6';
+            } else if (pattern.hitTP3) {
+                if (statusEl) statusEl.innerHTML = '✅ All TPs Complete!';
+                card.style.border = '3px solid #10b981';
+            } else if (pattern.hitTP2) {
+                if (statusEl) statusEl.innerHTML = '🎯 TP1 & TP2 Hit';
+                const tp2Row = card.querySelector('[data-tp="tp2"]');
+                if (tp2Row) tp2Row.style.background = 'rgba(16, 185, 129, 0.3)';
+            } else if (pattern.hitTP1) {
+                if (statusEl) statusEl.innerHTML = '🎯 TP1 Hit';
+                const tp1Row = card.querySelector('[data-tp="tp1"]');
+                if (tp1Row) tp1Row.style.background = 'rgba(16, 185, 129, 0.3)';
             }
         }
 
@@ -1891,10 +2160,29 @@ Trade wisely! 💪`;
             setTimeout(() => {
                 initCanvas();
                 updateZoomDisplay();
+                
+                // Load existing signals from Firebase
+                loadSignalsFromFirebase().then(signals => {
+                    if (signals && signals.length > 0) {
+                        console.log(`📊 Loaded ${signals.length} signals from Firebase`);
+                        allDetectedPatterns = signals;
+                        
+                        // Display loaded signals
+                        signals.slice(0, 10).reverse().forEach(signal => {
+                            displayPattern(signal);
+                        });
+                    }
+                });
+                
                 startChart();
-                console.log('🚀 Auto-started chart with pattern detection');
+                console.log('🚀 Auto-started chart with pattern detection (140 candles)');
             }, 500);
         });
+
+        // Track signals every 5 seconds
+        setInterval(() => {
+            trackAllSignals();
+        }, 5000);
     </script>
 </body>
 </html>
