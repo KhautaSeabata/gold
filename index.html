@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deriv Pattern Analyzer - Auto Live with WhatsApp Alerts</title>
+    <title>Deriv Multi-Chart Pattern Analyzer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * {
@@ -13,72 +13,121 @@
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
+            padding: 15px;
+            color: white;
         }
-        .container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 1400px;
-            width: 100%;
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
         }
         h1 {
-            color: #333;
-            text-align: center;
+            font-size: 2em;
             margin-bottom: 10px;
-            font-size: 2.5em;
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 20px;
-            font-size: 1.1em;
+            color: #aaa;
+            font-size: 1em;
         }
-        .info-bar {
+        .global-controls {
             display: flex;
-            justify-content: space-around;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
             margin-bottom: 20px;
             padding: 15px;
-            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 10px;
+        }
+        button, select {
+            padding: 10px 20px;
+            font-size: 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
             color: white;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        button:hover, select:hover {
+            transform: translateY(-2px);
+        }
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .chart-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
             flex-wrap: wrap;
+            gap: 10px;
+        }
+        .chart-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #FF6B35;
+        }
+        .chart-controls {
+            display: flex;
+            gap: 5px;
+        }
+        .chart-controls select {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        .chart-info {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            font-size: 0.85em;
         }
         .info-item {
             text-align: center;
-            padding: 5px 15px;
         }
         .info-label {
+            opacity: 0.7;
             font-size: 0.9em;
-            opacity: 0.9;
         }
         .info-value {
-            font-size: 1.3em;
             font-weight: bold;
-            margin-top: 5px;
-        }
-        .chart-wrapper {
-            position: relative;
-            margin-bottom: 20px;
+            margin-top: 3px;
         }
         .chart-container {
             position: relative;
-            height: 500px;
+            height: 350px;
             background: #1a1a2e;
             border-radius: 10px;
             overflow: hidden;
             cursor: grab;
+            margin-bottom: 10px;
         }
         .chart-container:active {
             cursor: grabbing;
         }
-        #chartCanvas {
+        canvas {
             width: 100%;
             height: 100%;
         }
@@ -92,143 +141,79 @@
             z-index: 10;
         }
         .zoom-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
+            width: 35px;
+            height: 35px;
+            border-radius: 6px;
             border: none;
             background: rgba(255, 255, 255, 0.9);
             color: #333;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.2s;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
         .zoom-btn:hover {
             background: white;
             transform: scale(1.1);
         }
-        .zoom-btn:active {
-            transform: scale(0.95);
-        }
         .zoom-info {
-            width: 40px;
-            height: 30px;
-            border-radius: 8px;
+            width: 35px;
+            height: 25px;
+            border-radius: 6px;
             background: rgba(255, 255, 255, 0.9);
             color: #333;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: bold;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-            align-items: center;
-        }
-        button, select {
-            padding: 12px 24px;
-            font-size: 16px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+        .trendline-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
             color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            z-index: 10;
+            max-width: 180px;
+        }
+        .trendline-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 3px 0;
+        }
+        .trendline-color {
+            width: 15px;
+            height: 3px;
+            border-radius: 2px;
+        }
+        .patterns-section {
+            margin-top: 10px;
+        }
+        .patterns-header {
+            font-size: 1em;
             font-weight: bold;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        button:hover, select:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-        button:active {
-            transform: translateY(0);
-        }
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .status {
-            text-align: center;
-            padding: 10px;
-            border-radius: 8px;
-            margin-top: 15px;
-            font-weight: bold;
-        }
-        .status.connected {
-            background: #d4edda;
-            color: #155724;
-        }
-        .status.disconnected {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        .status.loading {
-            background: #fff3cd;
-            color: #856404;
-        }
-        .green { color: #10b981; }
-        .red { color: #ef4444; }
-        .api-info {
-            background: #e3f2fd;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
-            color: #1565c0;
-            font-size: 14px;
-        }
-        .api-info a {
-            color: #0d47a1;
-            font-weight: bold;
-            text-decoration: none;
-        }
-        .api-info a:hover {
-            text-decoration: underline;
-        }
-
-        /* Pattern Detection Styles */
-        .pattern-section {
-            margin-top: 30px;
-            border-top: 3px solid #FF6B35;
-            padding-top: 20px;
-        }
-        .pattern-header {
-            text-align: center;
-            font-size: 1.8em;
-            color: #333;
-            margin-bottom: 20px;
-            font-weight: bold;
-        }
-        .threejs-container {
-            height: 200px;
-            background: #1a1a2e;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            overflow: hidden;
+            margin-bottom: 8px;
+            color: #FF6B35;
         }
         .patterns-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 10px;
         }
         .pattern-card {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 10px;
+            padding: 12px;
             color: white;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            font-size: 0.85em;
             animation: slideIn 0.5s ease-out;
         }
         .pattern-card.bullish {
@@ -243,7 +228,7 @@
         @keyframes slideIn {
             from {
                 opacity: 0;
-                transform: translateY(20px);
+                transform: translateY(10px);
             }
             to {
                 opacity: 1;
@@ -251,45 +236,43 @@
             }
         }
         .pattern-name {
-            font-size: 1.3em;
+            font-size: 1.1em;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
         }
         .pattern-timeframe {
             background: rgba(255, 255, 255, 0.2);
-            padding: 4px 12px;
-            border-radius: 20px;
+            padding: 2px 8px;
+            border-radius: 12px;
             font-size: 0.7em;
         }
         .pattern-details {
-            margin-top: 15px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 5px;
+            margin-top: 8px;
         }
         .pattern-row {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            padding: 8px;
+            padding: 4px;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
         }
         .pattern-label {
-            font-size: 0.9em;
             opacity: 0.9;
         }
         .pattern-value {
             font-weight: bold;
-            font-size: 1.1em;
         }
         .confidence-bar {
-            margin-top: 10px;
-            height: 8px;
+            margin-top: 8px;
+            height: 6px;
             background: rgba(255, 255, 255, 0.2);
             border-radius: 10px;
             overflow: hidden;
@@ -302,15 +285,15 @@
         }
         .no-patterns {
             text-align: center;
-            padding: 40px;
-            color: #666;
-            font-size: 1.1em;
+            padding: 20px;
+            color: #aaa;
+            font-size: 0.9em;
         }
         .alert-badge {
             background: #fbbf24;
             color: #1a1a2e;
-            padding: 6px 14px;
-            border-radius: 20px;
+            padding: 3px 8px;
+            border-radius: 12px;
             font-size: 0.7em;
             font-weight: bold;
             animation: pulse 1.5s infinite;
@@ -319,161 +302,312 @@
             0%, 100% { transform: scale(1); opacity: 1; }
             50% { transform: scale(1.05); opacity: 0.9; }
         }
-        .auto-live-indicator {
-            padding: 12px 24px;
-            background: rgba(16, 185, 129, 0.2);
-            border-radius: 8px;
-            color: #10b981;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .trendline-toggle {
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .trendline-toggle:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-        .trendline-toggle.active {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        }
-        .trendline-info {
-            position: absolute;
-            top: 60px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
-            font-size: 12px;
-            z-index: 10;
-            max-width: 200px;
-        }
-        .trendline-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin: 5px 0;
-        }
-        .trendline-color {
-            width: 20px;
-            height: 3px;
-            border-radius: 2px;
-        }
-        .notification-info {
+        .status {
             text-align: center;
-            margin-bottom: 15px;
-            padding: 12px;
-            background: rgba(16, 185, 129, 0.1);
-            border-radius: 8px;
-            border: 2px solid rgba(16, 185, 129, 0.3);
+            padding: 8px;
+            border-radius: 6px;
+            margin-top: 8px;
+            font-weight: bold;
+            font-size: 0.85em;
         }
-        .notification-info strong {
+        .status.connected {
+            background: rgba(16, 185, 129, 0.2);
             color: #10b981;
-            font-size: 1.1em;
+        }
+        .status.disconnected {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+        .status.loading {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+        .green { color: #10b981; }
+        .red { color: #ef4444; }
+        
+        @media (max-width: 1200px) {
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>📊 Deriv Pattern Analyzer</h1>
-        <div class="subtitle">Auto-Live Chart with AI Pattern Detection & WhatsApp Alerts</div>
-        
-        <div class="api-info">
-            <strong>🎯 No API Key Required!</strong> Auto-connecting to Deriv's WebSocket API
-        </div>
+    <div class="header">
+        <h1>📊 Deriv Multi-Chart Pattern Analyzer</h1>
+        <div class="subtitle">Real-time Analysis on 4 Charts | Auto TPs: 10, 20, 30 pips | Firebase Tracking</div>
+    </div>
 
-        <div class="controls">
-            <select id="symbol">
-                <option value="R_10">Volatility 10 Index</option>
-                <option value="R_25" selected>Volatility 25 Index</option>
-                <option value="R_50">Volatility 50 Index</option>
-                <option value="R_75">Volatility 75 Index</option>
-                <option value="R_100">Volatility 100 Index</option>
-                <option value="1HZ10V">Volatility 10 (1s) Index</option>
-                <option value="1HZ25V">Volatility 25 (1s) Index</option>
-                <option value="1HZ50V">Volatility 50 (1s) Index</option>
-                <option value="1HZ75V">Volatility 75 (1s) Index</option>
-                <option value="1HZ100V">Volatility 100 (1s) Index</option>
-            </select>
-            <select id="timeframe">
-                <option value="60">1 Minute</option>
-                <option value="120">2 Minutes</option>
-                <option value="300" selected>5 Minutes</option>
-                <option value="900">15 Minutes</option>
-                <option value="1800">30 Minutes</option>
-                <option value="3600">1 Hour</option>
-            </select>
-            <button onclick="refreshChart()" id="refreshBtn" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">🔄 Refresh Chart</button>
-            <button onclick="clearAllSignals()" id="clearBtn" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">🗑️ Clear Signals</button>
-            <button onclick="stopChart()" id="stopBtn" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">⏸️ Stop Chart</button>
-            <button onclick="toggleTrendlines()" id="trendlineToggle" class="trendline-toggle active">📈 Trendlines: ON</button>
-            <div class="auto-live-indicator">
-                <span style="font-size: 1.2em;">🟢</span>
-                <span>Auto-Live Mode</span>
-            </div>
-        </div>
-        
-        <div class="info-bar">
-            <div class="info-item">
-                <div class="info-label">Current Price</div>
-                <div class="info-value" id="currentPrice">--</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Change</div>
-                <div class="info-value" id="priceChange">--</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">High</div>
-                <div class="info-value" id="highPrice">--</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Low</div>
-                <div class="info-value" id="lowPrice">--</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Last Update</div>
-                <div class="info-value" id="lastUpdate">--</div>
-            </div>
-        </div>
+    <div class="global-controls">
+        <button onclick="startAllCharts()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">▶️ Start All Charts</button>
+        <button onclick="stopAllCharts()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">⏸️ Stop All</button>
+        <button onclick="refreshAllCharts()" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">🔄 Refresh All</button>
+        <button onclick="clearAllSignals()" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">🗑️ Clear All Signals</button>
+        <button onclick="toggleAllTrendlines()" id="globalTrendlineToggle" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);">📈 Trendlines: ON</button>
+    </div>
 
-        <div class="chart-wrapper">
-            <div class="chart-container" id="chartContainer">
-                <canvas id="chartCanvas"></canvas>
+    <div class="chart-grid">
+        <!-- Chart 1 -->
+        <div class="chart-panel">
+            <div class="chart-header">
+                <div class="chart-title" id="chartTitle1">Chart 1</div>
+                <div class="chart-controls">
+                    <select id="symbol1">
+                        <option value="R_10">Vol 10</option>
+                        <option value="R_25" selected>Vol 25</option>
+                        <option value="R_50">Vol 50</option>
+                        <option value="R_75">Vol 75</option>
+                        <option value="R_100">Vol 100</option>
+                        <option value="1HZ10V">Vol 10 (1s)</option>
+                        <option value="1HZ25V">Vol 25 (1s)</option>
+                        <option value="1HZ50V">Vol 50 (1s)</option>
+                        <option value="1HZ75V">Vol 75 (1s)</option>
+                        <option value="1HZ100V">Vol 100 (1s)</option>
+                    </select>
+                    <select id="timeframe1">
+                        <option value="60" selected>1M</option>
+                        <option value="120">2M</option>
+                        <option value="300">5M</option>
+                        <option value="900">15M</option>
+                        <option value="1800">30M</option>
+                        <option value="3600">1H</option>
+                    </select>
+                </div>
+            </div>
+            <div class="chart-info" id="info1">
+                <div class="info-item">
+                    <div class="info-label">Price</div>
+                    <div class="info-value" id="price1">--</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Change</div>
+                    <div class="info-value" id="change1">--</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">High</div>
+                    <div class="info-value" id="high1">--</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Low</div>
+                    <div class="info-value" id="low1">--</div>
+                </div>
+            </div>
+            <div class="chart-container" id="chartContainer1">
+                <canvas id="chartCanvas1"></canvas>
                 <div class="zoom-controls">
-                    <button class="zoom-btn" onclick="zoomIn()">+</button>
-                    <div class="zoom-info" id="zoomLevel">100</div>
-                    <button class="zoom-btn" onclick="zoomOut()">−</button>
+                    <button class="zoom-btn" onclick="zoomChart(1, 'in')">+</button>
+                    <div class="zoom-info" id="zoom1">100</div>
+                    <button class="zoom-btn" onclick="zoomChart(1, 'out')">−</button>
                 </div>
-                <div class="trendline-info" id="trendlineInfo" style="display: none;">
-                    <div style="font-weight: bold; margin-bottom: 5px;">📊 Active Trendlines</div>
-                    <div id="trendlineList"></div>
+                <div class="trendline-info" id="trendlineInfo1" style="display: none;">
+                    <div style="font-weight: bold; margin-bottom: 3px;">📊 Lines</div>
+                    <div id="trendlineList1"></div>
+                </div>
+            </div>
+            <div class="status loading" id="status1">Ready to start</div>
+            <div class="patterns-section">
+                <div class="patterns-header">🎯 Detected Patterns</div>
+                <div class="patterns-container" id="patterns1">
+                    <div class="no-patterns">No patterns detected yet</div>
                 </div>
             </div>
         </div>
 
-        <div class="status loading" id="status">🚀 Auto-starting live chart...</div>
-
-        <!-- Pattern Detection Section -->
-        <div class="pattern-section" id="patternSection">
-            <div class="pattern-header">🎯 Live Pattern Detection & Trading Signals</div>
-            <div class="notification-info">
-                <strong>📱 WhatsApp Alerts Enabled!</strong><br>
-                High confidence patterns (85%+) will trigger notifications to: <strong>+26659878360</strong><br>
-                <span style="color: #6366f1; font-weight: bold;">🔥 Analyzing latest 140 candlesticks | TPs: 10, 20, 30 pips</span><br>
-                <span style="color: #10b981; font-size: 0.9em;">✅ Signals auto-saved to Firebase Database</span>
+        <!-- Chart 2 -->
+        <div class="chart-panel">
+            <div class="chart-header">
+                <div class="chart-title" id="chartTitle2">Chart 2</div>
+                <div class="chart-controls">
+                    <select id="symbol2">
+                        <option value="R_10">Vol 10</option>
+                        <option value="R_25">Vol 25</option>
+                        <option value="R_50" selected>Vol 50</option>
+                        <option value="R_75">Vol 75</option>
+                        <option value="R_100">Vol 100</option>
+                        <option value="1HZ10V">Vol 10 (1s)</option>
+                        <option value="1HZ25V">Vol 25 (1s)</option>
+                        <option value="1HZ50V">Vol 50 (1s)</option>
+                        <option value="1HZ75V">Vol 75 (1s)</option>
+                        <option value="1HZ100V">Vol 100 (1s)</option>
+                    </select>
+                    <select id="timeframe2">
+                        <option value="60">1M</option>
+                        <option value="120">2M</option>
+                        <option value="300" selected>5M</option>
+                        <option value="900">15M</option>
+                        <option value="1800">30M</option>
+                        <option value="3600">1H</option>
+                    </select>
+                </div>
             </div>
-            <div class="threejs-container" id="threejsContainer"></div>
-            <div class="patterns-container" id="patternsContainer">
-                <div class="no-patterns">🔍 Scanning latest 140 candlesticks for patterns...</div>
+            <div class="chart-info" id="info2">
+                <div class="info-item">
+                    <div class="info-label">Price</div>
+                    <div class="info-value" id="price2">--</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Change</div>
+                    <div class="info-value" id="change2">--</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">High</div>
+                    <div class="info-value" id="high2">--</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Low</div>
+                    <div class="info-value" id="low2">--</div>
+                </div>
+            </div>
+            <div class="chart-container" id="chartContainer2">
+                <canvas id="chartCanvas2"></canvas>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomChart(2, 'in')">+</button>
+                    <div class="zoom-info" id="zoom2">100</div>
+                    <button class="zoom-btn" onclick="zoomChart(2, 'out')">−</button>
+                </div>
+                <div class="trendline-info" id="trendlineInfo2" style="display: none;">
+                    <div style="font-weight: bold; margin-bottom: 3px;">📊 Lines</div>
+                    <div id="trendlineList2"></div>
+                </div>
+            </div>
+            <div class="status loading" id="status2">Ready to start</div>
+            <div class="patterns-section">
+                <div class="patterns-header">🎯 Detected Patterns</div>
+                <div class="patterns-container" id="patterns2">
+                    <div class="no-patterns">No patterns detected yet</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 3 -->
+        <div class="chart-panel">
+            <div class="chart-header">
+                <div class="chart-title" id="chartTitle3">Chart 3</div>
+                <div class="chart-controls">
+                    <select id="symbol3">
+                        <option value="R_10">Vol 10</option>
+                        <option value="R_25">Vol 25</option>
+                        <option value="R_50">Vol 50</option>
+                        <option value="R_75" selected>Vol 75</option>
+                        <option value="R_100">Vol 100</option>
+                        <option value="1HZ10V">Vol 10 (1s)</option>
+                        <option value="1HZ25V">Vol 25 (1s)</option>
+                        <option value="1HZ50V">Vol 50 (1s)</option>
+                        <option value="1HZ75V">Vol 75 (1s)</option>
+                        <option value="1HZ100V">Vol 100 (1s)</option>
+                    </select>
+                    <select id="timeframe3">
+                        <option value="60">1M</option>
+                        <option value="120">2M</option>
+                        <option value="300">5M</option>
+                        <option value="900" selected>15M</option>
+                        <option value="1800">30M</option>
+                        <option value="3600">1H</option>
+                    </select>
+                </div>
+            </div>
+            <div class="chart-info" id="info3">
+                <div class="info-item">
+                    <div class="info-label">Price</div>
+                    <div class="info-value" id="price3">--</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Change</div>
+                    <div class="info-value" id="change3">--</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">High</div>
+                    <div class="info-value" id="high3">--</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Low</div>
+                    <div class="info-value" id="low3">--</div>
+                </div>
+            </div>
+            <div class="chart-container" id="chartContainer3">
+                <canvas id="chartCanvas3"></canvas>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomChart(3, 'in')">+</button>
+                    <div class="zoom-info" id="zoom3">100</div>
+                    <button class="zoom-btn" onclick="zoomChart(3, 'out')">−</button>
+                </div>
+                <div class="trendline-info" id="trendlineInfo3" style="display: none;">
+                    <div style="font-weight: bold; margin-bottom: 3px;">📊 Lines</div>
+                    <div id="trendlineList3"></div>
+                </div>
+            </div>
+            <div class="status loading" id="status3">Ready to start</div>
+            <div class="patterns-section">
+                <div class="patterns-header">🎯 Detected Patterns</div>
+                <div class="patterns-container" id="patterns3">
+                    <div class="no-patterns">No patterns detected yet</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 4 -->
+        <div class="chart-panel">
+            <div class="chart-header">
+                <div class="chart-title" id="chartTitle4">Chart 4</div>
+                <div class="chart-controls">
+                    <select id="symbol4">
+                        <option value="R_10">Vol 10</option>
+                        <option value="R_25">Vol 25</option>
+                        <option value="R_50">Vol 50</option>
+                        <option value="R_75">Vol 75</option>
+                        <option value="R_100" selected>Vol 100</option>
+                        <option value="1HZ10V">Vol 10 (1s)</option>
+                        <option value="1HZ25V">Vol 25 (1s)</option>
+                        <option value="1HZ50V">Vol 50 (1s)</option>
+                        <option value="1HZ75V">Vol 75 (1s)</option>
+                        <option value="1HZ100V">Vol 100 (1s)</option>
+                    </select>
+                    <select id="timeframe4">
+                        <option value="60">1M</option>
+                        <option value="120">2M</option>
+                        <option value="300">5M</option>
+                        <option value="900">15M</option>
+                        <option value="1800" selected>30M</option>
+                        <option value="3600">1H</option>
+                    </select>
+                </div>
+            </div>
+            <div class="chart-info" id="info4">
+                <div class="info-item">
+                    <div class="info-label">Price</div>
+                    <div class="info-value" id="price4">--</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Change</div>
+                    <div class="info-value" id="change4">--</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">High</div>
+                    <div class="info-value" id="high4">--</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Low</div>
+                    <div class="info-value" id="low4">--</div>
+                </div>
+            </div>
+            <div class="chart-container" id="chartContainer4">
+                <canvas id="chartCanvas4"></canvas>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomChart(4, 'in')">+</button>
+                    <div class="zoom-info" id="zoom4">100</div>
+                    <button class="zoom-btn" onclick="zoomChart(4, 'out')">−</button>
+                </div>
+                <div class="trendline-info" id="trendlineInfo4" style="display: none;">
+                    <div style="font-weight: bold; margin-bottom: 3px;">📊 Lines</div>
+                    <div id="trendlineList4"></div>
+                </div>
+            </div>
+            <div class="status loading" id="status4">Ready to start</div>
+            <div class="patterns-section">
+                <div class="patterns-header">🎯 Detected Patterns</div>
+                <div class="patterns-container" id="patterns4">
+                    <div class="no-patterns">No patterns detected yet</div>
+                </div>
             </div>
         </div>
     </div>
@@ -484,258 +618,60 @@
         // ============================================
         
         const WHATSAPP_NUMBER = '+26659878360';
-        
-        // Firebase Realtime Database Configuration
         const FIREBASE_DB_URL = 'https://alerts-83c9b-default-rtdb.firebaseio.com';
-        
-        // Replace this with your backend webhook URL for WhatsApp integration
-        const WEBHOOK_URL = 'https://your-backend-server.com/api/send-whatsapp';
-        
-        // ============================================
-        // FIREBASE DATABASE FUNCTIONS
-        // ============================================
-        
-        async function saveSignalToFirebase(signal) {
-            try {
-                const signalData = {
-                    ...signal,
-                    savedAt: new Date().toISOString(),
-                    symbol: symbol,
-                    id: signal.id.toString()
-                };
+        const WEBHOOK_URL = 'YOUR_WEBHOOK_URL_HERE';
 
-                const response = await fetch(`${FIREBASE_DB_URL}/signals/${signal.id}.json`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(signalData)
-                });
+        // Global settings
+        let globalTrendlinesEnabled = true;
+        let allDetectedPatterns = [];
 
-                if (response.ok) {
-                    console.log('✅ Signal saved to Firebase:', signal.name);
-                    return true;
-                } else {
-                    console.error('❌ Failed to save signal to Firebase');
-                    return false;
-                }
-            } catch (error) {
-                console.error('❌ Firebase save error:', error);
-                return false;
-            }
-        }
+        // Chart instances storage
+        const charts = {
+            1: { canvas: null, ctx: null, data: [], ws: null, symbol: 'R_25', timeframe: 60, currentCandle: null, zoom: 100, offset: 0, dragging: false, analyzer: null, trendlines: [], autoScroll: true },
+            2: { canvas: null, ctx: null, data: [], ws: null, symbol: 'R_50', timeframe: 300, currentCandle: null, zoom: 100, offset: 0, dragging: false, analyzer: null, trendlines: [], autoScroll: true },
+            3: { canvas: null, ctx: null, data: [], ws: null, symbol: 'R_75', timeframe: 900, currentCandle: null, zoom: 100, offset: 0, dragging: false, analyzer: null, trendlines: [], autoScroll: true },
+            4: { canvas: null, ctx: null, data: [], ws: null, symbol: 'R_100', timeframe: 1800, currentCandle: null, zoom: 100, offset: 0, dragging: false, analyzer: null, trendlines: [], autoScroll: true }
+        };
 
-        async function updateSignalStatus(signalId, updates) {
-            try {
-                const response = await fetch(`${FIREBASE_DB_URL}/signals/${signalId}.json`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        ...updates,
-                        lastUpdated: new Date().toISOString()
-                    })
-                });
-
-                if (response.ok) {
-                    console.log('✅ Signal updated in Firebase:', signalId);
-                    return true;
-                }
-            } catch (error) {
-                console.error('❌ Firebase update error:', error);
-            }
-            return false;
-        }
-
-        async function loadSignalsFromFirebase() {
-            try {
-                const response = await fetch(`${FIREBASE_DB_URL}/signals.json`);
-                const data = await response.json();
-                
-                if (data) {
-                    const signals = Object.values(data);
-                    console.log('✅ Loaded signals from Firebase:', signals.length);
-                    return signals;
-                }
-                return [];
-            } catch (error) {
-                console.error('❌ Firebase load error:', error);
-                return [];
-            }
-        }
-
-        async function clearAllSignalsFromFirebase() {
-            try {
-                const response = await fetch(`${FIREBASE_DB_URL}/signals.json`, {
-                    method: 'DELETE'
-                });
-
-                if (response.ok) {
-                    console.log('✅ All signals cleared from Firebase');
-                    return true;
-                }
-            } catch (error) {
-                console.error('❌ Firebase clear error:', error);
-            }
-            return false;
-        }
-
-        async function trackSignalProgress(signal, currentPrice) {
-            const price = parseFloat(currentPrice);
-            const entry = parseFloat(signal.entry);
-            const tp1 = parseFloat(signal.tp1);
-            const tp2 = parseFloat(signal.tp2);
-            const tp3 = parseFloat(signal.tp3);
-            const sl = parseFloat(signal.sl);
-
-            let updates = {};
-            let shouldUpdate = false;
-
-            if (signal.bias === 'bullish') {
-                if (!signal.hitTP1 && price >= tp1) {
-                    updates.hitTP1 = true;
-                    shouldUpdate = true;
-                    showTrackingNotification('🎯 TP1 Hit!', signal.name);
-                }
-                if (!signal.hitTP2 && price >= tp2) {
-                    updates.hitTP2 = true;
-                    shouldUpdate = true;
-                    showTrackingNotification('🎯 TP2 Hit!', signal.name);
-                }
-                if (!signal.hitTP3 && price >= tp3) {
-                    updates.hitTP3 = true;
-                    updates.status = 'completed';
-                    shouldUpdate = true;
-                    showTrackingNotification('🎯 TP3 Hit! All TPs Complete!', signal.name);
-                }
-                if (!signal.hitSL && price <= sl) {
-                    updates.hitSL = true;
-                    updates.status = 'stopped';
-                    shouldUpdate = true;
-                    showTrackingNotification('🛑 Stop Loss Hit', signal.name);
-                }
-            } else if (signal.bias === 'bearish') {
-                if (!signal.hitTP1 && price <= tp1) {
-                    updates.hitTP1 = true;
-                    shouldUpdate = true;
-                    showTrackingNotification('🎯 TP1 Hit!', signal.name);
-                }
-                if (!signal.hitTP2 && price <= tp2) {
-                    updates.hitTP2 = true;
-                    shouldUpdate = true;
-                    showTrackingNotification('🎯 TP2 Hit!', signal.name);
-                }
-                if (!signal.hitTP3 && price <= tp3) {
-                    updates.hitTP3 = true;
-                    updates.status = 'completed';
-                    shouldUpdate = true;
-                    showTrackingNotification('🎯 TP3 Hit! All TPs Complete!', signal.name);
-                }
-                if (!signal.hitSL && price >= sl) {
-                    updates.hitSL = true;
-                    updates.status = 'stopped';
-                    shouldUpdate = true;
-                    showTrackingNotification('🛑 Stop Loss Hit', signal.name);
-                }
-            }
-
-            if (shouldUpdate) {
-                Object.assign(signal, updates);
-                await updateSignalStatus(signal.id, updates);
-            }
-        }
-
-        function showTrackingNotification(title, patternName) {
-            if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification(title, {
-                    body: patternName,
-                    icon: '🎯'
-                });
-            }
-            
-            showNotificationToast(`${title} - ${patternName}`);
-            playNotificationSound();
-        }
+        const chartPadding = { top: 30, right: 50, bottom: 30, left: 50 };
 
         // ============================================
-        // PATTERN ANALYZER CLASS (Embedded)
+        // PATTERN ANALYZER CLASS
         // ============================================
         
         class PatternAnalyzer {
-            constructor() {
-                this.patterns = [];
-                this.activeTimeframes = [60, 120, 300, 900, 1800, 3600];
-                this.candleData = {
-                    60: [], 120: [], 300: [], 900: [], 1800: [], 3600: []
-                };
+            constructor(chartId) {
+                this.chartId = chartId;
                 this.detectedPatterns = [];
-                this.scene = null;
-                this.camera = null;
-                this.renderer = null;
-                this.patternMeshes = [];
             }
 
-            initThreeJS(container) {
-                const width = container.clientWidth;
-                const height = 200;
-
-                this.scene = new THREE.Scene();
-                this.scene.background = new THREE.Color(0x1a1a2e);
-                this.camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-                this.camera.position.z = 50;
-                this.renderer = new THREE.WebGLRenderer({ antialias: true });
-                this.renderer.setSize(width, height);
-                container.appendChild(this.renderer.domElement);
-
-                const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-                this.scene.add(ambientLight);
-                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-                directionalLight.position.set(0, 1, 1);
-                this.scene.add(directionalLight);
-
-                this.animate();
-            }
-
-            animate() {
-                requestAnimationFrame(() => this.animate());
-                this.patternMeshes.forEach(mesh => {
-                    mesh.rotation.y += 0.005;
-                });
-                this.renderer.render(this.scene, this.camera);
-            }
-
-            updateCandleData(mainCandles, timeframe) {
-                if (!this.activeTimeframes.includes(timeframe)) return;
-                this.candleData[timeframe] = mainCandles.slice(-100);
-                this.detectPatterns(timeframe);
-            }
-
-            detectPatterns(timeframe) {
-                const candles = this.candleData[timeframe];
+            updateCandleData(candles, timeframe) {
                 if (candles.length < 20) return;
-                const recentCandles = candles.slice(-50);
-                
-                this.detectTriangle(recentCandles, timeframe, 'symmetrical');
-                this.detectTriangle(recentCandles, timeframe, 'ascending');
-                this.detectTriangle(recentCandles, timeframe, 'descending');
-                this.detectHeadAndShoulders(recentCandles, timeframe, false);
-                this.detectHeadAndShoulders(recentCandles, timeframe, true);
-                this.detectDoubleTopBottom(recentCandles, timeframe, 'top');
-                this.detectDoubleTopBottom(recentCandles, timeframe, 'bottom');
-                this.detectWedge(recentCandles, timeframe, 'rising');
-                this.detectWedge(recentCandles, timeframe, 'falling');
-                this.detectFlag(recentCandles, timeframe, 'bull');
-                this.detectFlag(recentCandles, timeframe, 'bear');
+                this.detectPatterns(candles, timeframe);
+            }
+
+            detectPatterns(candles, timeframe) {
+                // Detect patterns on all available candles
+                this.detectTriangle(candles, timeframe, 'symmetrical');
+                this.detectTriangle(candles, timeframe, 'ascending');
+                this.detectTriangle(candles, timeframe, 'descending');
+                this.detectHeadAndShoulders(candles, timeframe, false);
+                this.detectHeadAndShoulders(candles, timeframe, true);
+                this.detectDoubleTopBottom(candles, timeframe, 'top');
+                this.detectDoubleTopBottom(candles, timeframe, 'bottom');
+                this.detectWedge(candles, timeframe, 'rising');
+                this.detectWedge(candles, timeframe, 'falling');
+                this.detectFlag(candles, timeframe, 'bull');
+                this.detectFlag(candles, timeframe, 'bear');
             }
 
             detectTriangle(candles, timeframe, type) {
-                if (candles.length < 20) return null;
+                if (candles.length < 20) return;
                 const highs = candles.map(c => c.h);
                 const lows = candles.map(c => c.l);
                 const peaks = this.findPeaks(highs);
                 const troughs = this.findTroughs(lows);
-                if (peaks.length < 2 || troughs.length < 2) return null;
+                if (peaks.length < 2 || troughs.length < 2) return;
 
                 const recentPeaks = peaks.slice(-3);
                 const recentTroughs = troughs.slice(-3);
@@ -764,38 +700,19 @@
                     );
                     this.addPattern(pattern);
 
-                    // Draw trendlines for triangle
-                    const upperLine = recentPeaks.map(idx => ({
-                        x: candles[idx].x,
-                        y: highs[idx]
-                    }));
-                    const lowerLine = recentTroughs.map(idx => ({
-                        x: candles[idx].x,
-                        y: lows[idx]
-                    }));
-
-                    if (window.onTrendlineDetected) {
-                        window.onTrendlineDetected({
-                            points: upperLine,
-                            label: 'Resistance',
-                            color: '#ef4444',
-                            patternType: `triangle-upper-${type}`
-                        });
-                        window.onTrendlineDetected({
-                            points: lowerLine,
-                            label: 'Support',
-                            color: '#10b981',
-                            patternType: `triangle-lower-${type}`
-                        });
-                    }
+                    // Draw trendlines
+                    const upperLine = recentPeaks.map(idx => ({ x: candles[idx].x, y: highs[idx] }));
+                    const lowerLine = recentTroughs.map(idx => ({ x: candles[idx].x, y: lows[idx] }));
+                    addTrendline(this.chartId, upperLine, 'Resistance', '#ef4444', `triangle-upper-${type}`);
+                    addTrendline(this.chartId, lowerLine, 'Support', '#10b981', `triangle-lower-${type}`);
                 }
             }
 
             detectHeadAndShoulders(candles, timeframe, inverse = false) {
-                if (candles.length < 25) return null;
+                if (candles.length < 25) return;
                 const prices = inverse ? candles.map(c => c.l) : candles.map(c => c.h);
                 const extremes = inverse ? this.findTroughs(prices) : this.findPeaks(prices);
-                if (extremes.length < 5) return null;
+                if (extremes.length < 5) return;
 
                 const recent = extremes.slice(-5);
                 if (recent.length === 5) {
@@ -808,49 +725,27 @@
                     if (leftShoulderValid && rightShoulderValid && headHigher && shouldersLevel) {
                         const currentPrice = candles[candles.length - 1].c;
                         const pattern = this.createPatternSignal(
-                            inverse ? 'Inverse Head and Shoulders' : 'Head and Shoulders',
+                            inverse ? 'Inverse H&S' : 'H&S',
                             inverse ? 'bullish' : 'bearish',
                             currentPrice, timeframe, candles
                         );
                         this.addPattern(pattern);
 
-                        // Draw neckline
                         const necklinePrice = (prices[recent[1]] + prices[recent[3]]) / 2;
                         const necklinePoints = [
                             { x: candles[recent[1]].x, y: necklinePrice },
-                            { x: candles[recent[3]].x, y: necklinePrice },
-                            { x: candles[candles.length - 1].x, y: necklinePrice }
+                            { x: candles[recent[3]].x, y: necklinePrice }
                         ];
-
-                        if (window.onTrendlineDetected) {
-                            window.onTrendlineDetected({
-                                points: necklinePoints,
-                                label: 'Neckline',
-                                color: '#fbbf24',
-                                patternType: inverse ? 'inv-h&s-neckline' : 'h&s-neckline'
-                            });
-
-                            // Draw pattern outline
-                            const patternOutline = recent.map(idx => ({
-                                x: candles[idx].x,
-                                y: prices[idx]
-                            }));
-                            window.onTrendlineDetected({
-                                points: patternOutline,
-                                label: inverse ? 'Inv H&S' : 'H&S',
-                                color: inverse ? '#10b981' : '#ef4444',
-                                patternType: inverse ? 'inv-h&s-outline' : 'h&s-outline'
-                            });
-                        }
+                        addTrendline(this.chartId, necklinePoints, 'Neckline', '#fbbf24', inverse ? 'inv-hs-neck' : 'hs-neck');
                     }
                 }
             }
 
             detectDoubleTopBottom(candles, timeframe, type) {
-                if (candles.length < 20) return null;
+                if (candles.length < 20) return;
                 const prices = type === 'top' ? candles.map(c => c.h) : candles.map(c => c.l);
                 const extremes = type === 'top' ? this.findPeaks(prices) : this.findTroughs(prices);
-                if (extremes.length < 2) return null;
+                if (extremes.length < 2) return;
 
                 const recent = extremes.slice(-2);
                 const [first, second] = recent.map(i => prices[i]);
@@ -865,43 +760,18 @@
                     );
                     this.addPattern(pattern);
 
-                    // Draw double top/bottom levels
-                    const level = (first + second) / 2;
-                    const levelPoints = [
-                        { x: candles[recent[0]].x, y: level },
-                        { x: candles[recent[1]].x, y: level }
-                    ];
-
-                    if (window.onTrendlineDetected) {
-                        window.onTrendlineDetected({
-                            points: levelPoints,
-                            label: type === 'top' ? 'Double Top' : 'Double Bottom',
-                            color: type === 'top' ? '#ef4444' : '#10b981',
-                            patternType: `double-${type}`
-                        });
-
-                        // Draw connecting line between peaks/troughs
-                        const connectingLine = recent.map(idx => ({
-                            x: candles[idx].x,
-                            y: prices[idx]
-                        }));
-                        window.onTrendlineDetected({
-                            points: connectingLine,
-                            label: '',
-                            color: type === 'top' ? '#ef4444' : '#10b981',
-                            patternType: `double-${type}-connect`
-                        });
-                    }
+                    const levelPoints = recent.map(idx => ({ x: candles[idx].x, y: prices[idx] }));
+                    addTrendline(this.chartId, levelPoints, type === 'top' ? 'Double Top' : 'Double Bot', type === 'top' ? '#ef4444' : '#10b981', `double-${type}`);
                 }
             }
 
             detectWedge(candles, timeframe, type) {
-                if (candles.length < 20) return null;
+                if (candles.length < 20) return;
                 const highs = candles.map(c => c.h);
                 const lows = candles.map(c => c.l);
                 const peaks = this.findPeaks(highs);
                 const troughs = this.findTroughs(lows);
-                if (peaks.length < 2 || troughs.length < 2) return null;
+                if (peaks.length < 2 || troughs.length < 2) return;
 
                 const recentPeaks = peaks.slice(-3);
                 const recentTroughs = troughs.slice(-3);
@@ -927,35 +797,15 @@
                     );
                     this.addPattern(pattern);
 
-                    // Draw wedge lines
-                    const upperLine = recentPeaks.map(idx => ({
-                        x: candles[idx].x,
-                        y: highs[idx]
-                    }));
-                    const lowerLine = recentTroughs.map(idx => ({
-                        x: candles[idx].x,
-                        y: lows[idx]
-                    }));
-
-                    if (window.onTrendlineDetected) {
-                        window.onTrendlineDetected({
-                            points: upperLine,
-                            label: 'Upper',
-                            color: '#f97316',
-                            patternType: `wedge-upper-${type}`
-                        });
-                        window.onTrendlineDetected({
-                            points: lowerLine,
-                            label: 'Lower',
-                            color: '#f97316',
-                            patternType: `wedge-lower-${type}`
-                        });
-                    }
+                    const upperLine = recentPeaks.map(idx => ({ x: candles[idx].x, y: highs[idx] }));
+                    const lowerLine = recentTroughs.map(idx => ({ x: candles[idx].x, y: lows[idx] }));
+                    addTrendline(this.chartId, upperLine, 'Upper', '#f97316', `wedge-upper-${type}`);
+                    addTrendline(this.chartId, lowerLine, 'Lower', '#f97316', `wedge-lower-${type}`);
                 }
             }
 
             detectFlag(candles, timeframe, type) {
-                if (candles.length < 15) return null;
+                if (candles.length < 15) return;
                 const recent = candles.slice(-15);
                 const pole = recent.slice(0, 5);
                 const flag = recent.slice(5);
@@ -964,7 +814,7 @@
                     (pole[4].c - pole[0].o) / pole[0].o :
                     (pole[0].o - pole[4].c) / pole[0].o;
 
-                if (poleMove < 0.02) return null;
+                if (poleMove < 0.02) return;
 
                 const flagRange = Math.max(...flag.map(c => c.h)) - Math.min(...flag.map(c => c.l));
                 const flagAvg = flag.reduce((sum, c) => sum + c.c, 0) / flag.length;
@@ -979,37 +829,8 @@
                     );
                     this.addPattern(pattern);
 
-                    // Draw pole line
-                    const polePoints = [
-                        { x: pole[0].x, y: pole[0].o },
-                        { x: pole[4].x, y: pole[4].c }
-                    ];
-
-                    // Draw flag consolidation box
-                    const flagHigh = Math.max(...flag.map(c => c.h));
-                    const flagLow = Math.min(...flag.map(c => c.l));
-                    const flagBox = [
-                        { x: flag[0].x, y: flagHigh },
-                        { x: flag[flag.length - 1].x, y: flagHigh },
-                        { x: flag[flag.length - 1].x, y: flagLow },
-                        { x: flag[0].x, y: flagLow },
-                        { x: flag[0].x, y: flagHigh }
-                    ];
-
-                    if (window.onTrendlineDetected) {
-                        window.onTrendlineDetected({
-                            points: polePoints,
-                            label: 'Pole',
-                            color: type === 'bull' ? '#10b981' : '#ef4444',
-                            patternType: `flag-pole-${type}`
-                        });
-                        window.onTrendlineDetected({
-                            points: flagBox,
-                            label: 'Flag',
-                            color: type === 'bull' ? '#10b981' : '#ef4444',
-                            patternType: `flag-box-${type}`
-                        });
-                    }
+                    const polePoints = [{ x: pole[0].x, y: pole[0].o }, { x: pole[4].x, y: pole[4].c }];
+                    addTrendline(this.chartId, polePoints, 'Pole', type === 'bull' ? '#10b981' : '#ef4444', `flag-pole-${type}`);
                 }
             }
 
@@ -1053,23 +874,21 @@
             }
 
             createPatternSignal(patternName, bias, currentPrice, timeframe, candles) {
-                // Calculate entry with 10, 20, and 30 pip TPs
-                const pipValue = 0.001; // 1 pip = 0.001 for most forex pairs
-                
+                const pipValue = 0.001;
                 let entry, tp1, tp2, tp3, sl;
 
                 if (bias === 'bullish') {
-                    entry = currentPrice * 1.0001; // Slight breakout
-                    tp1 = entry + (10 * pipValue);  // 10 pips
-                    tp2 = entry + (20 * pipValue);  // 20 pips
-                    tp3 = entry + (30 * pipValue);  // 30 pips
-                    sl = entry - (15 * pipValue);   // 15 pips SL
+                    entry = currentPrice * 1.0001;
+                    tp1 = entry + (10 * pipValue);
+                    tp2 = entry + (20 * pipValue);
+                    tp3 = entry + (30 * pipValue);
+                    sl = entry - (15 * pipValue);
                 } else if (bias === 'bearish') {
-                    entry = currentPrice * 0.9999; // Slight breakdown
-                    tp1 = entry - (10 * pipValue);  // 10 pips
-                    tp2 = entry - (20 * pipValue);  // 20 pips
-                    tp3 = entry - (30 * pipValue);  // 30 pips
-                    sl = entry + (15 * pipValue);   // 15 pips SL
+                    entry = currentPrice * 0.9999;
+                    tp1 = entry - (10 * pipValue);
+                    tp2 = entry - (20 * pipValue);
+                    tp3 = entry - (30 * pipValue);
+                    sl = entry + (15 * pipValue);
                 } else {
                     entry = currentPrice;
                     tp1 = currentPrice + (10 * pipValue);
@@ -1080,6 +899,7 @@
 
                 return {
                     id: Date.now() + Math.random(),
+                    chartId: this.chartId,
                     name: patternName,
                     bias: bias,
                     timeframe: timeframe,
@@ -1091,52 +911,20 @@
                     currentPrice: currentPrice.toFixed(5),
                     confidence: this.calculateConfidence(candles, bias),
                     timestamp: Date.now(),
-                    status: 'active',
-                    hitTP1: false,
-                    hitTP2: false,
-                    hitTP3: false,
-                    hitSL: false
+                    status: 'active'
                 };
-            }
-
-            calculateATR(candles, period = 14) {
-                if (candles.length < period) return 0;
-                const trs = [];
-                for (let i = 1; i < candles.length; i++) {
-                    const tr = Math.max(
-                        candles[i].h - candles[i].l,
-                        Math.abs(candles[i].h - candles[i - 1].c),
-                        Math.abs(candles[i].l - candles[i - 1].c)
-                    );
-                    trs.push(tr);
-                }
-                return trs.slice(-period).reduce((sum, tr) => sum + tr, 0) / period;
             }
 
             calculateConfidence(candles, bias) {
                 const recent = candles.slice(-10);
                 let confirming = 0;
-                let momentum = 0;
 
                 for (let i = 1; i < recent.length; i++) {
                     if (bias === 'bullish' && recent[i].c > recent[i - 1].c) confirming++;
                     if (bias === 'bearish' && recent[i].c < recent[i - 1].c) confirming++;
                 }
 
-                const startPrice = recent[0].c;
-                const endPrice = recent[recent.length - 1].c;
-                momentum = Math.abs((endPrice - startPrice) / startPrice) * 100;
-
                 let confidence = (confirming / (recent.length - 1)) * 100;
-                if (momentum > 1) confidence += 5;
-                if (momentum > 2) confidence += 5;
-                
-                const atr = this.calculateATR(candles.slice(-14));
-                const volatilityFactor = (atr / endPrice) * 100;
-                if (volatilityFactor > 0.5 && volatilityFactor < 2) {
-                    confidence += 10;
-                }
-
                 return Math.min(100, Math.round(confidence));
             }
 
@@ -1150,319 +938,155 @@
 
                 if (!existing) {
                     this.detectedPatterns.unshift(pattern);
-                    this.detectedPatterns = this.detectedPatterns.slice(0, 10);
-                    this.visualizePattern(pattern);
-                    this.notifyPattern(pattern);
+                    this.detectedPatterns = this.detectedPatterns.slice(0, 5);
+                    allDetectedPatterns.push(pattern);
+                    displayPattern(this.chartId, pattern);
+                    saveSignalToFirebase(pattern);
                     
                     if (pattern.confidence >= 85) {
-                        this.sendHighConfidenceAlert(pattern);
+                        playNotificationSound();
+                        if ('Notification' in window && Notification.permission === 'granted') {
+                            new Notification('🎯 High Confidence Pattern!', {
+                                body: `${pattern.name} - ${pattern.bias.toUpperCase()} - ${pattern.confidence}%`
+                            });
+                        }
                     }
                 }
             }
-
-            sendHighConfidenceAlert(pattern) {
-                if ('Notification' in window && Notification.permission === 'granted') {
-                    new Notification('🎯 High Confidence Pattern!', {
-                        body: `${pattern.name} - ${pattern.bias.toUpperCase()} - ${pattern.confidence}%`,
-                        icon: '📊',
-                        tag: pattern.id
-                    });
-                }
-
-                if (window.sendWhatsAppNotification) {
-                    window.sendWhatsAppNotification(pattern);
-                }
-
-                console.log('🚨 HIGH CONFIDENCE ALERT:', pattern);
-            }
-
-            visualizePattern(pattern) {
-                const geometry = new THREE.IcosahedronGeometry(5, 0);
-                let color;
-                switch (pattern.bias) {
-                    case 'bullish': color = 0x10b981; break;
-                    case 'bearish': color = 0xef4444; break;
-                    default: color = 0xfbbf24;
-                }
-
-                const material = new THREE.MeshPhongMaterial({ 
-                    color: color,
-                    emissive: color,
-                    emissiveIntensity: 0.3,
-                    transparent: true,
-                    opacity: 0.8
-                });
-
-                const mesh = new THREE.Mesh(geometry, material);
-                mesh.position.set(
-                    (Math.random() - 0.5) * 40,
-                    (Math.random() - 0.5) * 20,
-                    (Math.random() - 0.5) * 20
-                );
-
-                this.scene.add(mesh);
-                this.patternMeshes.push(mesh);
-
-                setTimeout(() => {
-                    this.scene.remove(mesh);
-                    this.patternMeshes = this.patternMeshes.filter(m => m !== mesh);
-                }, 10000);
-            }
-
-            notifyPattern(pattern) {
-                if (window.onPatternDetected) {
-                    window.onPatternDetected(pattern);
-                }
-            }
-
-            clearOldPatterns() {
-                const oneHourAgo = Date.now() - (60 * 60 * 1000);
-                this.detectedPatterns = this.detectedPatterns.filter(p => p.timestamp > oneHourAgo);
-            }
         }
 
         // ============================================
-        // WHATSAPP NOTIFICATION FUNCTION
+        // FIREBASE FUNCTIONS
         // ============================================
         
-        window.sendWhatsAppNotification = async function(pattern) {
-            const message = `🚨 *HIGH CONFIDENCE TRADING SIGNAL* 🚨
-
-📊 Pattern: *${pattern.name}*
-📈 Bias: *${pattern.bias.toUpperCase()}*
-⚡ Confidence: *${pattern.confidence}%*
-💰 Current Price: ${pattern.currentPrice}
-
-🎯 *Trading Setup:*
-📍 Entry: ${pattern.entry}
-🎯 TP1: ${pattern.tp1} (Conservative)
-🎯 TP2: ${pattern.tp2} (Moderate)
-🎯 TP3: ${pattern.tp3} (Aggressive)
-🛑 SL: ${pattern.sl}
-
-⏰ Time: ${new Date().toLocaleString()}
-📊 Timeframe: ${getTimeframeLabel(pattern.timeframe)}
-
-Trade wisely! 💪`;
-
-            console.log('📱 WhatsApp Message Ready:', message);
-
-            // Method 1: Using backend webhook (recommended)
+        async function saveSignalToFirebase(signal) {
             try {
-                const response = await fetch(WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        phone: WHATSAPP_NUMBER,
-                        message: message,
-                        pattern: pattern
-                    })
+                const response = await fetch(`${FIREBASE_DB_URL}/signals/${signal.id}.json`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...signal, savedAt: new Date().toISOString() })
                 });
-                
-                if (response.ok) {
-                    console.log('✅ WhatsApp notification sent successfully');
-                    showNotificationToast('✅ WhatsApp alert sent!');
-                } else {
-                    console.error('❌ Failed to send WhatsApp notification');
-                    fallbackWhatsAppMethod(message);
-                }
+                if (response.ok) console.log('✅ Signal saved:', signal.name);
             } catch (error) {
-                console.error('❌ WhatsApp notification error:', error);
-                fallbackWhatsAppMethod(message);
+                console.error('❌ Firebase save error:', error);
             }
-        };
-
-        function fallbackWhatsAppMethod(message) {
-            // Fallback: Generate WhatsApp Web link
-            const encodedMessage = encodeURIComponent(message);
-            const phoneNumber = WHATSAPP_NUMBER.replace(/[^0-9]/g, '');
-            const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
-            
-            console.log('📱 WhatsApp URL generated:', whatsappUrl);
-            showNotificationToast('📱 Click to send WhatsApp alert', whatsappUrl);
         }
 
-        function showNotificationToast(message, url = null) {
-            const toast = document.createElement('div');
-            toast.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                color: white;
-                padding: 15px 25px;
-                border-radius: 10px;
-                box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-                z-index: 10000;
-                font-weight: bold;
-                cursor: ${url ? 'pointer' : 'default'};
-                animation: slideInRight 0.3s ease-out;
-            `;
-            toast.textContent = message;
-            
-            if (url) {
-                toast.onclick = () => window.open(url, '_blank');
+        async function clearAllSignalsFromFirebase() {
+            try {
+                const response = await fetch(`${FIREBASE_DB_URL}/signals.json`, { method: 'DELETE' });
+                if (response.ok) console.log('✅ All signals cleared');
+            } catch (error) {
+                console.error('❌ Firebase clear error:', error);
             }
-            
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.style.animation = 'slideOutRight 0.3s ease-out';
-                setTimeout(() => toast.remove(), 300);
-            }, 5000);
         }
 
         // ============================================
-        // CHART VARIABLES
+        // CHART FUNCTIONS
         // ============================================
         
-        let canvas, ctx;
-        let candlestickData = [];
-        let ws;
-        let symbol = 'R_25';
-        let timeframe = 300;
-        let currentCandle = null;
-        let chartPadding = { top: 40, right: 60, bottom: 40, left: 60 };
-        let isConnected = false;
-        
-        let candlesPerScreen = 100;
-        let scrollOffset = 0;
-        let isDragging = false;
-        let dragStartX = 0;
-        let dragStartOffset = 0;
-        let autoScroll = true;
-
-        let patternAnalyzer = null;
-        let patternDetectionEnabled = true;
-
-        // ============================================
-        // CANVAS INITIALIZATION
-        // ============================================
-        
-        function initCanvas() {
-            canvas = document.getElementById('chartCanvas');
-            ctx = canvas.getContext('2d');
-            resizeCanvas();
-            window.addEventListener('resize', resizeCanvas);
+        function initChart(chartId) {
+            const chart = charts[chartId];
+            chart.canvas = document.getElementById(`chartCanvas${chartId}`);
+            chart.ctx = chart.canvas.getContext('2d');
+            chart.analyzer = new PatternAnalyzer(chartId);
             
-            const container = document.getElementById('chartContainer');
+            resizeCanvas(chartId);
+            window.addEventListener('resize', () => resizeCanvas(chartId));
             
-            container.addEventListener('mousedown', startDrag);
-            container.addEventListener('mousemove', drag);
-            container.addEventListener('mouseup', endDrag);
-            container.addEventListener('mouseleave', endDrag);
+            const container = document.getElementById(`chartContainer${chartId}`);
+            container.addEventListener('mousedown', (e) => startDrag(chartId, e));
+            container.addEventListener('mousemove', (e) => drag(chartId, e));
+            container.addEventListener('mouseup', () => endDrag(chartId));
+            container.addEventListener('mouseleave', () => endDrag(chartId));
             
-            container.addEventListener('touchstart', (e) => {
-                const touch = e.touches[0];
-                startDrag({ clientX: touch.clientX });
-                e.preventDefault();
+            document.getElementById(`symbol${chartId}`).addEventListener('change', () => {
+                chart.symbol = document.getElementById(`symbol${chartId}`).value;
+                if (chart.ws) startSingleChart(chartId);
             });
-            container.addEventListener('touchmove', (e) => {
-                const touch = e.touches[0];
-                drag({ clientX: touch.clientX });
-                e.preventDefault();
+            
+            document.getElementById(`timeframe${chartId}`).addEventListener('change', () => {
+                chart.timeframe = parseInt(document.getElementById(`timeframe${chartId}`).value);
+                if (chart.ws) startSingleChart(chartId);
             });
-            container.addEventListener('touchend', endDrag);
-            
-            container.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                if (e.deltaY < 0) {
-                    zoomIn();
-                } else {
-                    zoomOut();
-                }
-            }, { passive: false });
         }
 
-        function startDrag(e) {
-            isDragging = true;
-            dragStartX = e.clientX;
-            dragStartOffset = scrollOffset;
-            autoScroll = false;
+        function resizeCanvas(chartId) {
+            const chart = charts[chartId];
+            const container = chart.canvas.parentElement;
+            chart.canvas.width = container.clientWidth;
+            chart.canvas.height = container.clientHeight;
+            if (chart.data.length > 0) drawChart(chartId);
         }
 
-        function drag(e) {
-            if (!isDragging) return;
+        function startDrag(chartId, e) {
+            const chart = charts[chartId];
+            chart.dragging = true;
+            chart.dragStartX = e.clientX;
+            chart.dragStartOffset = chart.offset;
+            chart.autoScroll = false;
+        }
+
+        function drag(chartId, e) {
+            const chart = charts[chartId];
+            if (!chart.dragging) return;
             
-            const deltaX = e.clientX - dragStartX;
-            const pixelsPerCandle = (canvas.width - chartPadding.left - chartPadding.right) / candlesPerScreen;
+            const deltaX = e.clientX - chart.dragStartX;
+            const candlesPerScreen = Math.max(20, Math.floor(chart.zoom));
+            const pixelsPerCandle = (chart.canvas.width - chartPadding.left - chartPadding.right) / candlesPerScreen;
             const candlesDelta = Math.round(deltaX / pixelsPerCandle);
             
-            scrollOffset = Math.max(0, Math.min(
-                candlestickData.length - candlesPerScreen,
-                dragStartOffset - candlesDelta
+            chart.offset = Math.max(0, Math.min(
+                chart.data.length - candlesPerScreen,
+                chart.dragStartOffset - candlesDelta
             ));
             
-            drawChart();
+            drawChart(chartId);
         }
 
-        function endDrag() {
-            isDragging = false;
-            if (scrollOffset >= candlestickData.length - candlesPerScreen - 5) {
-                autoScroll = true;
+        function endDrag(chartId) {
+            const chart = charts[chartId];
+            chart.dragging = false;
+            const candlesPerScreen = Math.max(20, Math.floor(chart.zoom));
+            if (chart.offset >= chart.data.length - candlesPerScreen - 5) {
+                chart.autoScroll = true;
             }
         }
 
-        function zoomIn() {
-            candlesPerScreen = Math.max(20, candlesPerScreen - 10);
-            updateZoomDisplay();
-            adjustScrollAfterZoom();
-            drawChart();
-        }
-
-        function zoomOut() {
-            candlesPerScreen = Math.min(500, candlesPerScreen + 10);
-            updateZoomDisplay();
-            adjustScrollAfterZoom();
-            drawChart();
-        }
-
-        function updateZoomDisplay() {
-            const zoomPercent = Math.round((100 / candlesPerScreen) * 100);
-            document.getElementById('zoomLevel').textContent = zoomPercent;
-        }
-
-        function adjustScrollAfterZoom() {
-            if (autoScroll) {
-                scrollOffset = Math.max(0, candlestickData.length - candlesPerScreen);
+        function zoomChart(chartId, direction) {
+            const chart = charts[chartId];
+            if (direction === 'in') {
+                chart.zoom = Math.max(20, chart.zoom - 10);
             } else {
-                scrollOffset = Math.max(0, Math.min(
-                    candlestickData.length - candlesPerScreen,
-                    scrollOffset
-                ));
+                chart.zoom = Math.min(200, chart.zoom + 10);
             }
+            document.getElementById(`zoom${chartId}`).textContent = Math.round((100 / chart.zoom) * 100);
+            
+            if (chart.autoScroll) {
+                const candlesPerScreen = Math.max(20, Math.floor(chart.zoom));
+                chart.offset = Math.max(0, chart.data.length - candlesPerScreen);
+            }
+            
+            drawChart(chartId);
         }
 
-        function resizeCanvas() {
-            const container = canvas.parentElement;
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
-            if (candlestickData.length > 0) {
-                drawChart();
-            }
-        }
+        function drawChart(chartId) {
+            const chart = charts[chartId];
+            if (!chart.ctx || chart.data.length === 0) return;
 
-        // ============================================
-        // CHART DRAWING
-        // ============================================
-        
-        function drawChart() {
-            if (!ctx || candlestickData.length === 0) return;
+            chart.ctx.clearRect(0, 0, chart.canvas.width, chart.canvas.height);
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const chartWidth = chart.canvas.width - chartPadding.left - chartPadding.right;
+            const chartHeight = chart.canvas.height - chartPadding.top - chartPadding.bottom;
 
-            const chartWidth = canvas.width - chartPadding.left - chartPadding.right;
-            const chartHeight = canvas.height - chartPadding.top - chartPadding.bottom;
-
-            if (autoScroll) {
-                scrollOffset = Math.max(0, candlestickData.length - candlesPerScreen);
+            const candlesPerScreen = Math.max(20, Math.floor(chart.zoom));
+            if (chart.autoScroll) {
+                chart.offset = Math.max(0, chart.data.length - candlesPerScreen);
             }
 
-            const endIndex = Math.min(candlestickData.length, scrollOffset + candlesPerScreen);
+            const endIndex = Math.min(chart.data.length, chart.offset + candlesPerScreen);
             const startIndex = Math.max(0, endIndex - candlesPerScreen);
-            const visibleCandles = candlestickData.slice(startIndex, endIndex);
+            const visibleCandles = chart.data.slice(startIndex, endIndex);
 
             if (visibleCandles.length === 0) return;
 
@@ -1472,24 +1096,24 @@ Trade wisely! 💪`;
             const priceRange = maxPrice - minPrice;
             const padding = priceRange * 0.1;
 
-            const candleWidth = Math.max(2, Math.min(20, (chartWidth / visibleCandles.length) - 2));
+            const candleWidth = Math.max(2, Math.min(15, (chartWidth / visibleCandles.length) - 2));
             const spacing = chartWidth / visibleCandles.length;
 
             // Grid lines
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-            ctx.lineWidth = 1;
-            for (let i = 0; i <= 5; i++) {
-                const y = chartPadding.top + (chartHeight / 5) * i;
-                ctx.beginPath();
-                ctx.moveTo(chartPadding.left, y);
-                ctx.lineTo(canvas.width - chartPadding.right, y);
-                ctx.stroke();
+            chart.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            chart.ctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = chartPadding.top + (chartHeight / 4) * i;
+                chart.ctx.beginPath();
+                chart.ctx.moveTo(chartPadding.left, y);
+                chart.ctx.lineTo(chart.canvas.width - chartPadding.right, y);
+                chart.ctx.stroke();
 
-                const price = maxPrice + padding - (priceRange + padding * 2) * (i / 5);
-                ctx.fillStyle = '#888';
-                ctx.font = '12px Arial';
-                ctx.textAlign = 'right';
-                ctx.fillText(price.toFixed(2), chartPadding.left - 10, y + 4);
+                const price = maxPrice + padding - (priceRange + padding * 2) * (i / 4);
+                chart.ctx.fillStyle = '#888';
+                chart.ctx.font = '10px Arial';
+                chart.ctx.textAlign = 'right';
+                chart.ctx.fillText(price.toFixed(2), chartPadding.left - 5, y + 3);
             }
 
             // Draw candles
@@ -1504,92 +1128,46 @@ Trade wisely! 💪`;
                 const isUp = candle.c >= candle.o;
                 const color = isUp ? '#10b981' : '#ef4444';
 
-                ctx.strokeStyle = color;
-                ctx.lineWidth = Math.max(1, candleWidth / 4);
-                ctx.beginPath();
-                ctx.moveTo(x, yHigh);
-                ctx.lineTo(x, yLow);
-                ctx.stroke();
+                chart.ctx.strokeStyle = color;
+                chart.ctx.lineWidth = Math.max(1, candleWidth / 4);
+                chart.ctx.beginPath();
+                chart.ctx.moveTo(x, yHigh);
+                chart.ctx.lineTo(x, yLow);
+                chart.ctx.stroke();
 
-                ctx.fillStyle = color;
+                chart.ctx.fillStyle = color;
                 const bodyHeight = Math.max(Math.abs(yClose - yOpen), 1);
-                ctx.fillRect(x - candleWidth / 2, Math.min(yOpen, yClose), candleWidth, bodyHeight);
+                chart.ctx.fillRect(x - candleWidth / 2, Math.min(yOpen, yClose), candleWidth, bodyHeight);
             });
-
-            // Time labels
-            const maxLabels = Math.min(10, Math.floor(visibleCandles.length / 5));
-            const labelStep = Math.max(1, Math.floor(visibleCandles.length / maxLabels));
-            ctx.fillStyle = '#888';
-            ctx.font = '11px Arial';
-            ctx.textAlign = 'center';
-            visibleCandles.forEach((candle, index) => {
-                if (index % labelStep === 0 || index === visibleCandles.length - 1) {
-                    const x = chartPadding.left + spacing * index + spacing / 2;
-                    const date = new Date(candle.x);
-                    const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                    ctx.fillText(timeStr, x, canvas.height - chartPadding.bottom + 20);
-                }
-            });
-
-            // Title
-            const symbolName = document.getElementById('symbol').options[document.getElementById('symbol').selectedIndex].text;
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 16px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(symbolName, canvas.width / 2, 25);
-
-            // Scroll indicator
-            if (!autoScroll && scrollOffset < candlestickData.length - candlesPerScreen - 2) {
-                ctx.fillStyle = 'rgba(255, 107, 53, 0.7)';
-                ctx.font = 'bold 12px Arial';
-                ctx.textAlign = 'right';
-                ctx.fillText('◄ Scroll to see live updates', canvas.width - chartPadding.right - 10, chartPadding.top + 20);
-            }
 
             // Draw trendlines
-            drawTrendlines(visibleCandles, chartPadding, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding, spacing);
+            if (globalTrendlinesEnabled) {
+                drawTrendlines(chartId, visibleCandles, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding, spacing);
+            }
+
+            // Title
+            const symbolName = document.getElementById(`symbol${chartId}`).options[document.getElementById(`symbol${chartId}`).selectedIndex].text;
+            chart.ctx.fillStyle = '#fff';
+            chart.ctx.font = 'bold 12px Arial';
+            chart.ctx.textAlign = 'center';
+            chart.ctx.fillText(symbolName, chart.canvas.width / 2, 18);
         }
 
-        // ============================================
-        // TRENDLINE DRAWING
-        // ============================================
-        
-        function drawTrendlines(visibleCandles, chartPadding, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding, spacing) {
-            if (detectedTrendlines.length === 0 || !showTrendlines) return;
-
-            const now = Date.now();
+        function drawTrendlines(chartId, visibleCandles, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding, spacing) {
+            const chart = charts[chartId];
+            const ctx = chart.ctx;
             
-            detectedTrendlines.forEach((trendline, index) => {
-                // Remove expired trendlines (older than 1 hour)
-                if (now - trendline.timestamp > 60 * 60 * 1000) {
-                    detectedTrendlines.splice(index, 1);
-                    return;
-                }
-
-                // Only draw trendlines that are visible in current view
-                const firstVisibleTime = visibleCandles[0].x;
-                const lastVisibleTime = visibleCandles[visibleCandles.length - 1].x;
-
-                // Check if trendline overlaps with visible area
-                const trendlineStart = trendline.points[0].x;
-                const trendlineEnd = trendline.points[trendline.points.length - 1].x;
-
-                if (trendlineEnd < firstVisibleTime || trendlineStart > lastVisibleTime) {
-                    return; // Trendline not in view
-                }
-
-                // Draw the trendline
+            chart.trendlines.forEach(trendline => {
                 ctx.save();
                 ctx.strokeStyle = trendline.color;
-                ctx.lineWidth = 2.5;
+                ctx.lineWidth = 2;
                 ctx.setLineDash([5, 5]);
                 ctx.globalAlpha = 0.85;
 
                 ctx.beginPath();
                 let firstPoint = true;
 
-                trendline.points.forEach((point, i) => {
-                    // Find the index in visible candles
+                trendline.points.forEach(point => {
                     const candleIndex = visibleCandles.findIndex(c => Math.abs(c.x - point.x) < 30000);
                     
                     if (candleIndex !== -1) {
@@ -1607,47 +1185,55 @@ Trade wisely! 💪`;
 
                 ctx.stroke();
 
-                // Draw label at the end of the line
-                if (trendline.points.length > 0 && trendline.label) {
+                // Label
+                if (trendline.label && trendline.points.length > 0) {
                     const lastPoint = trendline.points[trendline.points.length - 1];
                     const lastCandleIndex = visibleCandles.findIndex(c => Math.abs(c.x - lastPoint.x) < 30000);
                     
                     if (lastCandleIndex !== -1) {
-                        const labelX = chartPadding.left + spacing * lastCandleIndex + spacing / 2 + 10;
+                        const labelX = chartPadding.left + spacing * lastCandleIndex + spacing / 2 + 8;
                         const labelY = chartPadding.top + ((maxPrice + padding - lastPoint.y) / (priceRange + padding * 2)) * chartHeight;
 
-                        // Draw label background
                         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
                         ctx.globalAlpha = 1;
                         const textWidth = ctx.measureText(trendline.label).width;
-                        ctx.fillRect(labelX - 2, labelY - 15, textWidth + 8, 18);
+                        ctx.fillRect(labelX - 2, labelY - 12, textWidth + 6, 14);
 
-                        // Draw label text
                         ctx.fillStyle = trendline.color;
-                        ctx.font = 'bold 11px Arial';
+                        ctx.font = 'bold 9px Arial';
                         ctx.textAlign = 'left';
-                        ctx.fillText(trendline.label, labelX + 2, labelY - 3);
+                        ctx.fillText(trendline.label, labelX, labelY - 2);
                     }
                 }
 
                 ctx.restore();
             });
 
-            // Update trendline info panel
-            updateTrendlineInfo();
+            updateTrendlineInfo(chartId);
         }
 
-        function updateTrendlineInfo() {
-            if (detectedTrendlines.length === 0 || !showTrendlines) {
-                document.getElementById('trendlineInfo').style.display = 'none';
+        function addTrendline(chartId, points, label, color, patternType) {
+            const chart = charts[chartId];
+            chart.trendlines = chart.trendlines.filter(t => t.patternType !== patternType);
+            chart.trendlines.push({ points, label, color, patternType, timestamp: Date.now() });
+            if (chart.trendlines.length > 10) chart.trendlines.shift();
+            drawChart(chartId);
+        }
+
+        function updateTrendlineInfo(chartId) {
+            const chart = charts[chartId];
+            const infoEl = document.getElementById(`trendlineInfo${chartId}`);
+            const listEl = document.getElementById(`trendlineList${chartId}`);
+            
+            if (chart.trendlines.length === 0 || !globalTrendlinesEnabled) {
+                infoEl.style.display = 'none';
                 return;
             }
 
-            document.getElementById('trendlineInfo').style.display = 'block';
-            const listEl = document.getElementById('trendlineList');
+            infoEl.style.display = 'block';
             listEl.innerHTML = '';
 
-            detectedTrendlines.slice(0, 5).forEach(tl => {
+            chart.trendlines.slice(0, 3).forEach(tl => {
                 if (tl.label) {
                     const item = document.createElement('div');
                     item.className = 'trendline-item';
@@ -1660,94 +1246,58 @@ Trade wisely! 💪`;
             });
         }
 
-        function addTrendline(points, label, color, patternType) {
-            // Remove old trendlines of the same type
-            detectedTrendlines = detectedTrendlines.filter(t => t.patternType !== patternType);
-
-            detectedTrendlines.push({
-                points: points,
-                label: label,
-                color: color,
-                patternType: patternType,
-                timestamp: Date.now()
-            });
-
-            // Keep only last 15 trendlines
-            if (detectedTrendlines.length > 15) {
-                detectedTrendlines.shift();
+        function startSingleChart(chartId) {
+            const chart = charts[chartId];
+            chart.symbol = document.getElementById(`symbol${chartId}`).value;
+            chart.timeframe = parseInt(document.getElementById(`timeframe${chartId}`).value);
+            
+            if (chart.ws && chart.ws.readyState === WebSocket.OPEN) {
+                chart.ws.close();
             }
 
-            drawChart();
-        }
-
-        function toggleTrendlines() {
-            showTrendlines = !showTrendlines;
-            const btn = document.getElementById('trendlineToggle');
+            chart.data = [];
+            chart.currentCandle = null;
+            chart.offset = 0;
+            chart.autoScroll = true;
             
-            if (showTrendlines) {
-                btn.textContent = '📈 Trendlines: ON';
-                btn.classList.add('active');
-            } else {
-                btn.textContent = '📈 Trendlines: OFF';
-                btn.classList.remove('active');
-                document.getElementById('trendlineInfo').style.display = 'none';
-            }
-            
-            drawChart();
+            updateStatus(chartId, 'loading', '📡 Connecting...');
+            connectWebSocket(chartId);
         }
 
-        function clearAllTrendlines() {
-            detectedTrendlines = [];
-            drawChart();
-        }
-
-        // Callback for pattern analyzer to add trendlines
-        window.onTrendlineDetected = function(trendlineData) {
-            addTrendline(
-                trendlineData.points,
-                trendlineData.label,
-                trendlineData.color,
-                trendlineData.patternType
-            );
-        };
-
-        // ============================================
-        // WEBSOCKET CONNECTION
-        // ============================================
-        
-        function connectWebSocket() {
+        function connectWebSocket(chartId) {
+            const chart = charts[chartId];
             const app_id = 1089;
-            ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${app_id}`);
+            chart.ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${app_id}`);
 
-            ws.onopen = () => {
-                console.log('WebSocket connected');
-                updateStatus('connected', '🟢 Connected & Live');
+            chart.ws.onopen = () => {
+                console.log(`Chart ${chartId} connected`);
+                updateStatus(chartId, 'connected', '🟢 Live');
                 
-                ws.send(JSON.stringify({
-                    ticks: symbol,
+                chart.ws.send(JSON.stringify({
+                    ticks: chart.symbol,
                     subscribe: 1
                 }));
 
-                ws.send(JSON.stringify({
-                    ticks_history: symbol,
+                chart.ws.send(JSON.stringify({
+                    ticks_history: chart.symbol,
                     count: 1000,
                     end: 'latest',
                     style: 'candles',
-                    granularity: timeframe
+                    granularity: chart.timeframe
                 }));
             };
 
-            ws.onmessage = (event) => {
+            chart.ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 
                 if (data.error) {
-                    console.error('API Error:', data.error);
-                    updateStatus('disconnected', `🔴 Error: ${data.error.message}`);
+                    console.error(`Chart ${chartId} error:`, data.error);
+                    updateStatus(chartId, 'disconnected', `🔴 Error`);
                     return;
                 }
 
                 if (data.msg_type === 'candles' && data.candles) {
-                    candlestickData = data.candles.map(c => ({
+                    chart.data = data.candles.map(c => ({
                         x: c.epoch * 1000,
                         o: parseFloat(c.open),
                         h: parseFloat(c.high),
@@ -1755,251 +1305,122 @@ Trade wisely! 💪`;
                         c: parseFloat(c.close)
                     }));
 
-                    if (candlestickData.length > 0) {
-                        currentCandle = { ...candlestickData[candlestickData.length - 1] };
+                    if (chart.data.length > 0) {
+                        chart.currentCandle = { ...chart.data[chart.data.length - 1] };
                     }
 
-                    drawChart();
-                    updateInfoBar();
+                    drawChart(chartId);
+                    updateInfoBar(chartId);
                     
-                    if (patternDetectionEnabled && patternAnalyzer) {
-                        patternAnalyzer.updateCandleData(candlestickData, timeframe);
+                    if (chart.analyzer) {
+                        chart.analyzer.updateCandleData(chart.data, chart.timeframe);
                     }
-                    
-                    // Track signal progress
-                    trackAllSignals();
                 } else if (data.msg_type === 'tick') {
                     const price = parseFloat(data.tick.quote);
                     const timestamp = data.tick.epoch * 1000;
 
-                    if (!currentCandle) {
-                        currentCandle = {
-                            x: Math.floor(timestamp / (timeframe * 1000)) * (timeframe * 1000),
+                    if (!chart.currentCandle) {
+                        chart.currentCandle = {
+                            x: Math.floor(timestamp / (chart.timeframe * 1000)) * (chart.timeframe * 1000),
                             o: price,
                             h: price,
                             l: price,
                             c: price
                         };
-                        candlestickData.push(currentCandle);
+                        chart.data.push(chart.currentCandle);
                     } else {
-                        const candleStart = Math.floor(timestamp / (timeframe * 1000)) * (timeframe * 1000);
+                        const candleStart = Math.floor(timestamp / (chart.timeframe * 1000)) * (chart.timeframe * 1000);
                         
-                        if (candleStart > currentCandle.x) {
-                            currentCandle = {
+                        if (candleStart > chart.currentCandle.x) {
+                            chart.currentCandle = {
                                 x: candleStart,
                                 o: price,
                                 h: price,
                                 l: price,
                                 c: price
                             };
-                            candlestickData.push(currentCandle);
+                            chart.data.push(chart.currentCandle);
                             
-                            if (candlestickData.length > 1000) {
-                                candlestickData.shift();
-                                if (!autoScroll && scrollOffset > 0) {
-                                    scrollOffset--;
+                            if (chart.data.length > 1000) {
+                                chart.data.shift();
+                                if (!chart.autoScroll && chart.offset > 0) {
+                                    chart.offset--;
                                 }
                             }
                         } else {
-                            currentCandle.c = price;
-                            currentCandle.h = Math.max(currentCandle.h, price);
-                            currentCandle.l = Math.min(currentCandle.l, price);
-                            candlestickData[candlestickData.length - 1] = currentCandle;
+                            chart.currentCandle.c = price;
+                            chart.currentCandle.h = Math.max(chart.currentCandle.h, price);
+                            chart.currentCandle.l = Math.min(chart.currentCandle.l, price);
+                            chart.data[chart.data.length - 1] = chart.currentCandle;
                         }
                     }
 
-                    drawChart();
-                    updateInfoBar();
+                    drawChart(chartId);
+                    updateInfoBar(chartId);
                     
-                    if (patternDetectionEnabled && patternAnalyzer) {
-                        patternAnalyzer.updateCandleData(candlestickData, timeframe);
+                    if (chart.analyzer) {
+                        chart.analyzer.updateCandleData(chart.data, chart.timeframe);
                     }
-                    
-                    // Track signal progress on every tick
-                    trackAllSignals();
                 }
             };
 
-            ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
-                updateStatus('disconnected', '🔴 Connection error');
+            chart.ws.onerror = (error) => {
+                console.error(`Chart ${chartId} WebSocket error:`, error);
+                updateStatus(chartId, 'disconnected', '🔴 Error');
             };
 
-            ws.onclose = () => {
-                console.log('WebSocket closed');
-                isConnected = false;
-                if (candlestickData.length > 0) {
-                    updateStatus('disconnected', '🔴 Disconnected');
+            chart.ws.onclose = () => {
+                console.log(`Chart ${chartId} closed`);
+                if (chart.data.length > 0) {
+                    updateStatus(chartId, 'disconnected', '🔴 Disconnected');
                 }
             };
         }
 
-        // ============================================
-        // UI UPDATES
-        // ============================================
-        
-        function updateInfoBar() {
-            if (candlestickData.length === 0) return;
+        function updateInfoBar(chartId) {
+            const chart = charts[chartId];
+            if (chart.data.length === 0) return;
 
-            const currentCandle = candlestickData[candlestickData.length - 1];
-            const firstCandle = candlestickData[0];
+            const currentCandle = chart.data[chart.data.length - 1];
+            const firstCandle = chart.data[0];
             
             const currentPrice = currentCandle.c;
             const openPrice = firstCandle.o;
             const change = currentPrice - openPrice;
             const changePercent = ((change / openPrice) * 100).toFixed(2);
 
-            document.getElementById('currentPrice').textContent = currentPrice.toFixed(2);
+            document.getElementById(`price${chartId}`).textContent = currentPrice.toFixed(2);
             
-            const changeEl = document.getElementById('priceChange');
+            const changeEl = document.getElementById(`change${chartId}`);
             const changeClass = change >= 0 ? 'green' : 'red';
-            changeEl.innerHTML = `<span class="${changeClass}">${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePercent}%)</span>`;
+            changeEl.innerHTML = `<span class="${changeClass}">${change >= 0 ? '+' : ''}${change.toFixed(2)}</span>`;
 
-            const allPrices = candlestickData.flatMap(c => [c.h, c.l]);
+            const allPrices = chart.data.flatMap(c => [c.h, c.l]);
             const high = Math.max(...allPrices);
             const low = Math.min(...allPrices);
 
-            document.getElementById('highPrice').textContent = high.toFixed(2);
-            document.getElementById('lowPrice').textContent = low.toFixed(2);
-            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+            document.getElementById(`high${chartId}`).textContent = high.toFixed(2);
+            document.getElementById(`low${chartId}`).textContent = low.toFixed(2);
         }
 
-        function updateStatus(type, message) {
-            const statusEl = document.getElementById('status');
+        function updateStatus(chartId, type, message) {
+            const statusEl = document.getElementById(`status${chartId}`);
             statusEl.className = `status ${type}`;
             statusEl.textContent = message;
         }
 
-        // ============================================
-        // CHART CONTROLS
-        // ============================================
-        
-        function startChart() {
-            symbol = document.getElementById('symbol').value;
-            timeframe = parseInt(document.getElementById('timeframe').value);
-            
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.close();
-            }
-
-            candlestickData = [];
-            currentCandle = null;
-            scrollOffset = 0;
-            autoScroll = true;
-            
-            updateStatus('loading', '📡 Connecting...');
-            connectWebSocket();
-            isConnected = true;
-
-            if (!patternAnalyzer) {
-                patternAnalyzer = new PatternAnalyzer();
-                const container = document.getElementById('threejsContainer');
-                patternAnalyzer.initThreeJS(container);
-                
-                window.onPatternDetected = function(pattern) {
-                    displayPattern(pattern);
-                };
-            }
-        }
-
-        function refreshChart() {
-            console.log('🔄 Refreshing chart...');
-            showNotificationToast('🔄 Refreshing chart and reloading data...');
-            
-            // Clear current data
-            candlestickData = [];
-            currentCandle = null;
-            scrollOffset = 0;
-            autoScroll = true;
-            
-            // Clear trendlines
-            detectedTrendlines = [];
-            
-            // Restart connection
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.close();
-            }
-            
-            setTimeout(() => {
-                startChart();
-                drawChart();
-            }, 500);
-        }
-
-        function clearAllSignals() {
-            if (confirm('Are you sure you want to clear all signals from the display and Firebase database?')) {
-                console.log('🗑️ Clearing all signals...');
-                
-                // Clear local display
-                const container = document.getElementById('patternsContainer');
-                container.innerHTML = '<div class="no-patterns">🔍 All signals cleared. Scanning for new patterns...</div>';
-                
-                // Clear stored patterns
-                allDetectedPatterns = [];
-                
-                // Clear trendlines
-                detectedTrendlines = [];
-                drawChart();
-                
-                // Clear from Firebase
-                clearAllSignalsFromFirebase().then(success => {
-                    if (success) {
-                        showNotificationToast('✅ All signals cleared from database');
-                    } else {
-                        showNotificationToast('⚠️ Failed to clear signals from database');
-                    }
-                });
-                
-                // Clear pattern analyzer's detected patterns
-                if (patternAnalyzer) {
-                    patternAnalyzer.detectedPatterns = [];
-                }
-            }
-        }
-
-        function stopChart() {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.close();
-            }
-            isConnected = false;
-            updateStatus('disconnected', '⏸️ Chart stopped');
-        }
-
-        function trackAllSignals() {
-            if (!candlestickData.length || !allDetectedPatterns.length) return;
-            
-            const currentPrice = candlestickData[candlestickData.length - 1].c;
-            
-            allDetectedPatterns.forEach(pattern => {
-                if (pattern.status === 'active') {
-                    trackSignalProgress(pattern, currentPrice);
-                }
-            });
-        }
-
-        // ============================================
-        // PATTERN DISPLAY
-        // ============================================
-        
-        function displayPattern(pattern) {
-            const container = document.getElementById('patternsContainer');
+        function displayPattern(chartId, pattern) {
+            const container = document.getElementById(`patterns${chartId}`);
             
             if (container.querySelector('.no-patterns')) {
                 container.innerHTML = '';
             }
 
             const highConfBadge = pattern.confidence >= 85 ? 
-                `<span class="alert-badge">🔥 HIGH CONFIDENCE</span>` : '';
-
-            // Track pattern
-            allDetectedPatterns.push(pattern);
-            
-            // Save to Firebase
-            saveSignalToFirebase(pattern);
+                `<span class="alert-badge">🔥 ${pattern.confidence}%</span>` : '';
 
             const card = document.createElement('div');
             card.className = `pattern-card ${pattern.bias}`;
-            card.setAttribute('data-pattern-id', pattern.id);
             card.innerHTML = `
                 <div class="pattern-name">
                     ${getBiasIcon(pattern.bias)} ${pattern.name}
@@ -2008,80 +1429,35 @@ Trade wisely! 💪`;
                 </div>
                 <div class="pattern-details">
                     <div class="pattern-row">
-                        <span class="pattern-label">Current Price</span>
-                        <span class="pattern-value">${pattern.currentPrice}</span>
-                    </div>
-                    <div class="pattern-row">
-                        <span class="pattern-label">Entry Price</span>
+                        <span class="pattern-label">Entry</span>
                         <span class="pattern-value">${pattern.entry}</span>
                     </div>
-                    <div class="pattern-row" data-tp="tp1">
-                        <span class="pattern-label">TP1 (10 pips)</span>
-                        <span class="pattern-value" style="color: #10b981;">🎯 ${pattern.tp1}</span>
-                    </div>
-                    <div class="pattern-row" data-tp="tp2">
-                        <span class="pattern-label">TP2 (20 pips)</span>
-                        <span class="pattern-value" style="color: #10b981;">🎯 ${pattern.tp2}</span>
-                    </div>
-                    <div class="pattern-row" data-tp="tp3">
-                        <span class="pattern-label">TP3 (30 pips)</span>
-                        <span class="pattern-value" style="color: #10b981;">🎯 ${pattern.tp3}</span>
+                    <div class="pattern-row">
+                        <span class="pattern-label">TP1</span>
+                        <span class="pattern-value" style="color: #c7f9cc;">🎯 ${pattern.tp1}</span>
                     </div>
                     <div class="pattern-row">
-                        <span class="pattern-label">Stop Loss (15 pips)</span>
-                        <span class="pattern-value" style="color: #ef4444;">🛑 ${pattern.sl}</span>
+                        <span class="pattern-label">TP2</span>
+                        <span class="pattern-value" style="color: #a7f3d0;">🎯 ${pattern.tp2}</span>
                     </div>
                     <div class="pattern-row">
-                        <span class="pattern-label">Signal</span>
-                        <span class="pattern-value">${pattern.bias.toUpperCase()}</span>
+                        <span class="pattern-label">TP3</span>
+                        <span class="pattern-value" style="color: #6ee7b7;">🎯 ${pattern.tp3}</span>
                     </div>
-                    <div class="pattern-row" style="background: rgba(100, 116, 139, 0.2);">
-                        <span class="pattern-label">Status</span>
-                        <span class="pattern-value" id="status-${pattern.id}">⏳ Active</span>
+                    <div class="pattern-row">
+                        <span class="pattern-label">SL</span>
+                        <span class="pattern-value" style="color: #fca5a5;">🛑 ${pattern.sl}</span>
                     </div>
                 </div>
                 <div class="confidence-bar">
                     <div class="confidence-fill" style="width: ${pattern.confidence}%"></div>
                 </div>
-                <div style="text-align: center; margin-top: 8px; font-size: 0.9em; opacity: 0.9;">
-                    Confidence: ${pattern.confidence}% | ID: ${pattern.id.toString().slice(0, 8)}
-                </div>
             `;
 
             container.insertBefore(card, container.firstChild);
 
-            while (container.children.length > 10) {
+            while (container.children.length > 3) {
                 container.removeChild(container.lastChild);
-            }
-
-            if (pattern.confidence >= 85) {
-                playNotificationSound();
-            }
-            
-            // Update card status when TP/SL hit
-            updatePatternCardStatus(pattern);
-        }
-
-        function updatePatternCardStatus(pattern) {
-            const card = document.querySelector(`[data-pattern-id="${pattern.id}"]`);
-            if (!card) return;
-
-            const statusEl = card.querySelector(`#status-${pattern.id}`);
-            
-            if (pattern.hitSL) {
-                if (statusEl) statusEl.innerHTML = '🛑 Stop Loss Hit';
-                card.style.opacity = '0.6';
-            } else if (pattern.hitTP3) {
-                if (statusEl) statusEl.innerHTML = '✅ All TPs Complete!';
-                card.style.border = '3px solid #10b981';
-            } else if (pattern.hitTP2) {
-                if (statusEl) statusEl.innerHTML = '🎯 TP1 & TP2 Hit';
-                const tp2Row = card.querySelector('[data-tp="tp2"]');
-                if (tp2Row) tp2Row.style.background = 'rgba(16, 185, 129, 0.3)';
-            } else if (pattern.hitTP1) {
-                if (statusEl) statusEl.innerHTML = '🎯 TP1 Hit';
-                const tp1Row = card.querySelector('[data-tp="tp1"]');
-                if (tp1Row) tp1Row.style.background = 'rgba(16, 185, 129, 0.3)';
             }
         }
 
@@ -2124,65 +1500,94 @@ Trade wisely! 💪`;
         }
 
         // ============================================
-        // EVENT LISTENERS & INITIALIZATION
+        // GLOBAL CONTROL FUNCTIONS
         // ============================================
         
-        document.getElementById('symbol').addEventListener('change', () => {
-            if (isConnected) {
-                startChart();
-            }
-        });
+        function startAllCharts() {
+            [1, 2, 3, 4].forEach(chartId => startSingleChart(chartId));
+        }
 
-        document.getElementById('timeframe').addEventListener('change', () => {
-            if (isConnected) {
-                startChart();
-            }
-        });
-
-        // Request notification permission
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission().then(permission => {
-                if (permission === 'granted') {
-                    console.log('✅ Notifications enabled');
+        function stopAllCharts() {
+            [1, 2, 3, 4].forEach(chartId => {
+                const chart = charts[chartId];
+                if (chart.ws && chart.ws.readyState === WebSocket.OPEN) {
+                    chart.ws.close();
                 }
+                updateStatus(chartId, 'disconnected', '⏸️ Stopped');
             });
         }
 
-        // Clean old patterns
-        setInterval(() => {
-            if (patternAnalyzer) {
-                patternAnalyzer.clearOldPatterns();
-            }
-        }, 60000);
-
-        // Auto-start on page load
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                initCanvas();
-                updateZoomDisplay();
+        function refreshAllCharts() {
+            [1, 2, 3, 4].forEach(chartId => {
+                const chart = charts[chartId];
+                chart.data = [];
+                chart.currentCandle = null;
+                chart.offset = 0;
+                chart.autoScroll = true;
+                chart.trendlines = [];
                 
-                // Load existing signals from Firebase
-                loadSignalsFromFirebase().then(signals => {
-                    if (signals && signals.length > 0) {
-                        console.log(`📊 Loaded ${signals.length} signals from Firebase`);
-                        allDetectedPatterns = signals;
-                        
-                        // Display loaded signals
-                        signals.slice(0, 10).reverse().forEach(signal => {
-                            displayPattern(signal);
-                        });
+                if (chart.ws && chart.ws.readyState === WebSocket.OPEN) {
+                    chart.ws.close();
+                }
+                
+                setTimeout(() => startSingleChart(chartId), 200 * chartId);
+            });
+        }
+
+        function clearAllSignals() {
+            if (confirm('Clear all signals from all charts and Firebase?')) {
+                [1, 2, 3, 4].forEach(chartId => {
+                    const container = document.getElementById(`patterns${chartId}`);
+                    container.innerHTML = '<div class="no-patterns">No patterns detected yet</div>';
+                    charts[chartId].trendlines = [];
+                    if (charts[chartId].analyzer) {
+                        charts[chartId].analyzer.detectedPatterns = [];
                     }
+                    drawChart(chartId);
                 });
                 
-                startChart();
-                console.log('🚀 Auto-started chart with pattern detection (140 candles)');
+                allDetectedPatterns = [];
+                clearAllSignalsFromFirebase();
+            }
+        }
+
+        function toggleAllTrendlines() {
+            globalTrendlinesEnabled = !globalTrendlinesEnabled;
+            const btn = document.getElementById('globalTrendlineToggle');
+            
+            if (globalTrendlinesEnabled) {
+                btn.textContent = '📈 Trendlines: ON';
+                btn.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)';
+            } else {
+                btn.textContent = '📈 Trendlines: OFF';
+                btn.style.background = 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
+                [1, 2, 3, 4].forEach(chartId => {
+                    document.getElementById(`trendlineInfo${chartId}`).style.display = 'none';
+                });
+            }
+            
+            [1, 2, 3, 4].forEach(chartId => drawChart(chartId));
+        }
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        
+        window.addEventListener('load', () => {
+            // Request notification permission
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+
+            // Initialize all charts
+            [1, 2, 3, 4].forEach(chartId => initChart(chartId));
+
+            // Auto-start all charts
+            setTimeout(() => {
+                startAllCharts();
+                console.log('🚀 All 4 charts auto-started');
             }, 500);
         });
-
-        // Track signals every 5 seconds
-        setInterval(() => {
-            trackAllSignals();
-        }, 5000);
     </script>
 </body>
 </html>
