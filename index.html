@@ -171,28 +171,45 @@
             align-items: center;
             justify-content: center;
         }
-        .trendline-info {
+        .analysis-overlay {
             position: absolute;
             top: 10px;
             left: 10px;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.85);
             color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 11px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 10px;
             z-index: 10;
-            max-width: 180px;
+            max-width: 200px;
+            max-height: 300px;
+            overflow-y: auto;
         }
-        .trendline-item {
+        .analysis-section {
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .analysis-section:last-child {
+            border-bottom: none;
+        }
+        .analysis-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: #fbbf24;
+            font-size: 11px;
+        }
+        .analysis-item {
             display: flex;
             align-items: center;
-            gap: 6px;
-            margin: 3px 0;
+            gap: 5px;
+            margin: 2px 0;
+            font-size: 9px;
         }
-        .trendline-color {
-            width: 15px;
-            height: 3px;
-            border-radius: 2px;
+        .level-line {
+            width: 12px;
+            height: 2px;
+            border-radius: 1px;
         }
         .patterns-section {
             margin-top: 10px;
@@ -335,7 +352,7 @@
 <body>
     <div class="header">
         <h1>📊 Deriv Multi-Chart Pattern Analyzer</h1>
-        <div class="subtitle">Real-time Analysis on 4 Charts | Auto TPs: 10, 20, 30 pips | Firebase Tracking</div>
+        <div class="subtitle">Real-time Analysis | Support/Resistance → Trendlines → Momentum → Patterns → Predictions</div>
     </div>
 
     <div class="global-controls">
@@ -343,7 +360,7 @@
         <button onclick="stopAllCharts()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">⏸️ Stop All</button>
         <button onclick="refreshAllCharts()" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">🔄 Refresh All</button>
         <button onclick="clearAllSignals()" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">🗑️ Clear All Signals</button>
-        <button onclick="toggleAllTrendlines()" id="globalTrendlineToggle" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);">📈 Trendlines: ON</button>
+        <button onclick="toggleAnalysisOverlay()" id="globalAnalysisToggle" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);">📊 Analysis: ON</button>
     </div>
 
     <div class="chart-grid">
@@ -399,10 +416,7 @@
                     <div class="zoom-info" id="zoom1">100</div>
                     <button class="zoom-btn" onclick="zoomChart(1, 'out')">−</button>
                 </div>
-                <div class="trendline-info" id="trendlineInfo1" style="display: none;">
-                    <div style="font-weight: bold; margin-bottom: 3px;">📊 Lines</div>
-                    <div id="trendlineList1"></div>
-                </div>
+                <div class="analysis-overlay" id="analysisOverlay1"></div>
             </div>
             <div class="status loading" id="status1">Ready to start</div>
             <div class="patterns-section">
@@ -465,10 +479,7 @@
                     <div class="zoom-info" id="zoom2">100</div>
                     <button class="zoom-btn" onclick="zoomChart(2, 'out')">−</button>
                 </div>
-                <div class="trendline-info" id="trendlineInfo2" style="display: none;">
-                    <div style="font-weight: bold; margin-bottom: 3px;">📊 Lines</div>
-                    <div id="trendlineList2"></div>
-                </div>
+                <div class="analysis-overlay" id="analysisOverlay2"></div>
             </div>
             <div class="status loading" id="status2">Ready to start</div>
             <div class="patterns-section">
@@ -531,10 +542,7 @@
                     <div class="zoom-info" id="zoom3">100</div>
                     <button class="zoom-btn" onclick="zoomChart(3, 'out')">−</button>
                 </div>
-                <div class="trendline-info" id="trendlineInfo3" style="display: none;">
-                    <div style="font-weight: bold; margin-bottom: 3px;">📊 Lines</div>
-                    <div id="trendlineList3"></div>
-                </div>
+                <div class="analysis-overlay" id="analysisOverlay3"></div>
             </div>
             <div class="status loading" id="status3">Ready to start</div>
             <div class="patterns-section">
@@ -597,10 +605,7 @@
                     <div class="zoom-info" id="zoom4">100</div>
                     <button class="zoom-btn" onclick="zoomChart(4, 'out')">−</button>
                 </div>
-                <div class="trendline-info" id="trendlineInfo4" style="display: none;">
-                    <div style="font-weight: bold; margin-bottom: 3px;">📊 Lines</div>
-                    <div id="trendlineList4"></div>
-                </div>
+                <div class="analysis-overlay" id="analysisOverlay4"></div>
             </div>
             <div class="status loading" id="status4">Ready to start</div>
             <div class="patterns-section">
@@ -613,45 +618,158 @@
     </div>
 
     <script>
-        // ============================================
-        // CONFIGURATION
-        // ============================================
-        
-        const WHATSAPP_NUMBER = '+26659878360';
         const FIREBASE_DB_URL = 'https://alerts-83c9b-default-rtdb.firebaseio.com';
-        const WEBHOOK_URL = 'YOUR_WEBHOOK_URL_HERE';
-
-        // Global settings
-        let globalTrendlinesEnabled = true;
+        
+        let globalAnalysisEnabled = true;
         let allDetectedPatterns = [];
 
-        // Chart instances storage
         const charts = {
-            1: { canvas: null, ctx: null, data: [], ws: null, symbol: 'R_25', timeframe: 60, currentCandle: null, zoom: 100, offset: 0, dragging: false, analyzer: null, trendlines: [], autoScroll: true },
-            2: { canvas: null, ctx: null, data: [], ws: null, symbol: 'R_50', timeframe: 300, currentCandle: null, zoom: 100, offset: 0, dragging: false, analyzer: null, trendlines: [], autoScroll: true },
-            3: { canvas: null, ctx: null, data: [], ws: null, symbol: 'R_75', timeframe: 900, currentCandle: null, zoom: 100, offset: 0, dragging: false, analyzer: null, trendlines: [], autoScroll: true },
-            4: { canvas: null, ctx: null, data: [], ws: null, symbol: 'R_100', timeframe: 1800, currentCandle: null, zoom: 100, offset: 0, dragging: false, analyzer: null, trendlines: [], autoScroll: true }
+            1: { canvas: null, ctx: null, data: [], ws: null, symbol: 'R_25', timeframe: 60, currentCandle: null, zoom: 100, offset: 0, dragging: false, analyzer: null, analysis: {}, autoScroll: true },
+            2: { canvas: null, ctx: null, data: [], ws: null, symbol: 'R_50', timeframe: 300, currentCandle: null, zoom: 100, offset: 0, dragging: false, analyzer: null, analysis: {}, autoScroll: true },
+            3: { canvas: null, ctx: null, data: [], ws: null, symbol: 'R_75', timeframe: 900, currentCandle: null, zoom: 100, offset: 0, dragging: false, analyzer: null, analysis: {}, autoScroll: true },
+            4: { canvas: null, ctx: null, data: [], ws: null, symbol: 'R_100', timeframe: 1800, currentCandle: null, zoom: 100, offset: 0, dragging: false, analyzer: null, analysis: {}, autoScroll: true }
         };
 
-        const chartPadding = { top: 30, right: 50, bottom: 30, left: 50 };
+        const chartPadding = { top: 30, right: 120, bottom: 30, left: 50 };
 
-        // ============================================
-        // PATTERN ANALYZER CLASS
-        // ============================================
-        
         class PatternAnalyzer {
             constructor(chartId) {
                 this.chartId = chartId;
                 this.detectedPatterns = [];
             }
 
-            updateCandleData(candles, timeframe) {
+            analyzeChart(candles, timeframe) {
                 if (candles.length < 20) return;
-                this.detectPatterns(candles, timeframe);
+
+                const chart = charts[this.chartId];
+                chart.analysis = {
+                    supportResistance: this.findSupportResistance(candles),
+                    trendlines: this.findTrendlines(candles),
+                    momentum: this.calculateMomentum(candles),
+                    patterns: this.detectAllPatterns(candles, timeframe),
+                    predictions: this.generatePredictions(candles)
+                };
+
+                this.updateAnalysisOverlay(this.chartId);
+                drawChart(this.chartId);
             }
 
-            detectPatterns(candles, timeframe) {
-                // Detect patterns on all available candles
+            findSupportResistance(candles) {
+                const levels = [];
+                const highs = candles.map(c => c.h);
+                const lows = candles.map(c => c.l);
+                
+                const resistance = Math.max(...highs.slice(-20));
+                const support = Math.min(...lows.slice(-20));
+                
+                levels.push({ type: 'resistance', price: resistance, strength: 85 });
+                levels.push({ type: 'support', price: support, strength: 85 });
+
+                const pivots = this.findPivotLevels(candles);
+                pivots.forEach(p => levels.push(p));
+
+                return levels.slice(0, 5);
+            }
+
+            findPivotLevels(candles) {
+                const levels = [];
+                const recent = candles.slice(-50);
+                const highs = recent.map(c => c.h);
+                const lows = recent.map(c => c.l);
+
+                for (let i = 2; i < recent.length - 2; i++) {
+                    if (highs[i] > highs[i-1] && highs[i] > highs[i-2] && 
+                        highs[i] > highs[i+1] && highs[i] > highs[i+2]) {
+                        levels.push({ type: 'resistance', price: highs[i], strength: 70 });
+                    }
+                    if (lows[i] < lows[i-1] && lows[i] < lows[i-2] && 
+                        lows[i] < lows[i+1] && lows[i] < lows[i+2]) {
+                        levels.push({ type: 'support', price: lows[i], strength: 70 });
+                    }
+                }
+
+                return levels.slice(-3);
+            }
+
+            findTrendlines(candles) {
+                const trendlines = [];
+                const highs = candles.map(c => c.h);
+                const lows = candles.map(c => c.l);
+                
+                const peaks = this.findPeaks(highs);
+                const troughs = this.findTroughs(lows);
+
+                if (peaks.length >= 2) {
+                    const recentPeaks = peaks.slice(-3);
+                    const points = recentPeaks.map(idx => ({ x: candles[idx].x, y: highs[idx] }));
+                    const slope = this.calculateSlope(recentPeaks.map((p, i) => [i, highs[p]]));
+                    trendlines.push({ 
+                        type: 'resistance',
+                        points: points,
+                        slope: slope,
+                        strength: 75,
+                        label: slope > 0 ? 'Rising Resistance' : 'Falling Resistance'
+                    });
+                }
+
+                if (troughs.length >= 2) {
+                    const recentTroughs = troughs.slice(-3);
+                    const points = recentTroughs.map(idx => ({ x: candles[idx].x, y: lows[idx] }));
+                    const slope = this.calculateSlope(recentTroughs.map((t, i) => [i, lows[t]]));
+                    trendlines.push({ 
+                        type: 'support',
+                        points: points,
+                        slope: slope,
+                        strength: 75,
+                        label: slope > 0 ? 'Rising Support' : 'Falling Support'
+                    });
+                }
+
+                return trendlines;
+            }
+
+            calculateMomentum(candles) {
+                const recent = candles.slice(-14);
+                const closes = recent.map(c => c.c);
+                
+                let gains = 0, losses = 0;
+                for (let i = 1; i < closes.length; i++) {
+                    const change = closes[i] - closes[i-1];
+                    if (change > 0) gains += change;
+                    else losses -= change;
+                }
+                
+                const rs = gains / (losses || 1);
+                const rsi = 100 - (100 / (1 + rs));
+                
+                const macd = this.calculateMACD(candles);
+                
+                let momentum = 'neutral';
+                if (rsi > 70) momentum = 'overbought';
+                else if (rsi < 30) momentum = 'oversold';
+                else if (rsi > 50 && macd > 0) momentum = 'bullish';
+                else if (rsi < 50 && macd < 0) momentum = 'bearish';
+
+                return { rsi: rsi.toFixed(1), macd: macd.toFixed(4), signal: momentum };
+            }
+
+            calculateMACD(candles) {
+                const closes = candles.slice(-26).map(c => c.c);
+                const ema12 = this.calculateEMA(closes, 12);
+                const ema26 = this.calculateEMA(closes, 26);
+                return ema12 - ema26;
+            }
+
+            calculateEMA(data, period) {
+                const k = 2 / (period + 1);
+                let ema = data[0];
+                for (let i = 1; i < data.length; i++) {
+                    ema = data[i] * k + ema * (1 - k);
+                }
+                return ema;
+            }
+
+            detectAllPatterns(candles, timeframe) {
                 this.detectTriangle(candles, timeframe, 'symmetrical');
                 this.detectTriangle(candles, timeframe, 'ascending');
                 this.detectTriangle(candles, timeframe, 'descending');
@@ -661,8 +779,29 @@
                 this.detectDoubleTopBottom(candles, timeframe, 'bottom');
                 this.detectWedge(candles, timeframe, 'rising');
                 this.detectWedge(candles, timeframe, 'falling');
-                this.detectFlag(candles, timeframe, 'bull');
-                this.detectFlag(candles, timeframe, 'bear');
+                return this.detectedPatterns.length;
+            }
+
+            generatePredictions(candles) {
+                if (candles.length < 10) return [];
+                
+                const recent = candles.slice(-10);
+                const lastCandle = candles[candles.length - 1];
+                const avgMove = recent.reduce((sum, c, i, arr) => {
+                    if (i === 0) return 0;
+                    return sum + Math.abs(c.c - arr[i-1].c);
+                }, 0) / (recent.length - 1);
+
+                const trend = this.calculateSlope(recent.map((c, i) => [i, c.c]));
+                const predictions = [];
+
+                for (let i = 1; i <= 5; i++) {
+                    const predictedPrice = lastCandle.c + (trend * avgMove * i);
+                    const timestamp = lastCandle.x + (charts[this.chartId].timeframe * 1000 * i);
+                    predictions.push({ x: timestamp, y: predictedPrice });
+                }
+
+                return predictions;
             }
 
             detectTriangle(candles, timeframe, type) {
@@ -699,12 +838,6 @@
                         bias, currentPrice, timeframe, candles
                     );
                     this.addPattern(pattern);
-
-                    // Draw trendlines
-                    const upperLine = recentPeaks.map(idx => ({ x: candles[idx].x, y: highs[idx] }));
-                    const lowerLine = recentTroughs.map(idx => ({ x: candles[idx].x, y: lows[idx] }));
-                    addTrendline(this.chartId, upperLine, 'Resistance', '#ef4444', `triangle-upper-${type}`);
-                    addTrendline(this.chartId, lowerLine, 'Support', '#10b981', `triangle-lower-${type}`);
                 }
             }
 
@@ -730,13 +863,6 @@
                             currentPrice, timeframe, candles
                         );
                         this.addPattern(pattern);
-
-                        const necklinePrice = (prices[recent[1]] + prices[recent[3]]) / 2;
-                        const necklinePoints = [
-                            { x: candles[recent[1]].x, y: necklinePrice },
-                            { x: candles[recent[3]].x, y: necklinePrice }
-                        ];
-                        addTrendline(this.chartId, necklinePoints, 'Neckline', '#fbbf24', inverse ? 'inv-hs-neck' : 'hs-neck');
                     }
                 }
             }
@@ -759,9 +885,6 @@
                         currentPrice, timeframe, candles
                     );
                     this.addPattern(pattern);
-
-                    const levelPoints = recent.map(idx => ({ x: candles[idx].x, y: prices[idx] }));
-                    addTrendline(this.chartId, levelPoints, type === 'top' ? 'Double Top' : 'Double Bot', type === 'top' ? '#ef4444' : '#10b981', `double-${type}`);
                 }
             }
 
@@ -796,41 +919,6 @@
                         bias, currentPrice, timeframe, candles
                     );
                     this.addPattern(pattern);
-
-                    const upperLine = recentPeaks.map(idx => ({ x: candles[idx].x, y: highs[idx] }));
-                    const lowerLine = recentTroughs.map(idx => ({ x: candles[idx].x, y: lows[idx] }));
-                    addTrendline(this.chartId, upperLine, 'Upper', '#f97316', `wedge-upper-${type}`);
-                    addTrendline(this.chartId, lowerLine, 'Lower', '#f97316', `wedge-lower-${type}`);
-                }
-            }
-
-            detectFlag(candles, timeframe, type) {
-                if (candles.length < 15) return;
-                const recent = candles.slice(-15);
-                const pole = recent.slice(0, 5);
-                const flag = recent.slice(5);
-
-                const poleMove = type === 'bull' ? 
-                    (pole[4].c - pole[0].o) / pole[0].o :
-                    (pole[0].o - pole[4].c) / pole[0].o;
-
-                if (poleMove < 0.02) return;
-
-                const flagRange = Math.max(...flag.map(c => c.h)) - Math.min(...flag.map(c => c.l));
-                const flagAvg = flag.reduce((sum, c) => sum + c.c, 0) / flag.length;
-                const consolidation = flagRange / flagAvg;
-
-                if (consolidation < 0.015) {
-                    const currentPrice = candles[candles.length - 1].c;
-                    const pattern = this.createPatternSignal(
-                        `${type === 'bull' ? 'Bull' : 'Bear'} Flag`,
-                        type === 'bull' ? 'bullish' : 'bearish',
-                        currentPrice, timeframe, candles
-                    );
-                    this.addPattern(pattern);
-
-                    const polePoints = [{ x: pole[0].x, y: pole[0].o }, { x: pole[4].x, y: pole[4].c }];
-                    addTrendline(this.chartId, polePoints, 'Pole', type === 'bull' ? '#10b981' : '#ef4444', `flag-pole-${type}`);
                 }
             }
 
@@ -953,12 +1041,63 @@
                     }
                 }
             }
+
+            updateAnalysisOverlay(chartId) {
+                if (!globalAnalysisEnabled) return;
+                
+                const overlay = document.getElementById(`analysisOverlay${chartId}`);
+                const chart = charts[chartId];
+                const a = chart.analysis;
+                
+                let html = '';
+                
+                if (a.supportResistance && a.supportResistance.length > 0) {
+                    html += '<div class="analysis-section">';
+                    html += '<div class="analysis-title">📊 Support/Resistance</div>';
+                    a.supportResistance.forEach(level => {
+                        const color = level.type === 'resistance' ? '#ef4444' : '#10b981';
+                        html += `<div class="analysis-item">
+                            <div class="level-line" style="background:${color}"></div>
+                            <span>${level.type}: ${level.price.toFixed(2)} (${level.strength}%)</span>
+                        </div>`;
+                    });
+                    html += '</div>';
+                }
+
+                if (a.trendlines && a.trendlines.length > 0) {
+                    html += '<div class="analysis-section">';
+                    html += '<div class="analysis-title">📈 Trendlines</div>';
+                    a.trendlines.forEach(tl => {
+                        const color = tl.type === 'resistance' ? '#f97316' : '#3b82f6';
+                        html += `<div class="analysis-item">
+                            <div class="level-line" style="background:${color}"></div>
+                            <span>${tl.label}</span>
+                        </div>`;
+                    });
+                    html += '</div>';
+                }
+
+                if (a.momentum) {
+                    html += '<div class="analysis-section">';
+                    html += '<div class="analysis-title">⚡ Momentum</div>';
+                    html += `<div class="analysis-item">RSI: ${a.momentum.rsi}</div>`;
+                    html += `<div class="analysis-item">MACD: ${a.momentum.macd}</div>`;
+                    html += `<div class="analysis-item">Signal: ${a.momentum.signal.toUpperCase()}</div>`;
+                    html += '</div>';
+                }
+
+                if (a.patterns !== undefined) {
+                    html += '<div class="analysis-section">';
+                    html += '<div class="analysis-title">🎯 Patterns</div>';
+                    html += `<div class="analysis-item">${a.patterns} detected</div>`;
+                    html += '</div>';
+                }
+
+                overlay.innerHTML = html;
+                overlay.style.display = html ? 'block' : 'none';
+            }
         }
 
-        // ============================================
-        // FIREBASE FUNCTIONS
-        // ============================================
-        
         async function saveSignalToFirebase(signal) {
             try {
                 const response = await fetch(`${FIREBASE_DB_URL}/signals/${signal.id}.json`, {
@@ -981,10 +1120,6 @@
             }
         }
 
-        // ============================================
-        // CHART FUNCTIONS
-        // ============================================
-        
         function initChart(chartId) {
             const chart = charts[chartId];
             chart.canvas = document.getElementById(`chartCanvas${chartId}`);
@@ -1084,7 +1219,8 @@
                 chart.offset = Math.max(0, chart.data.length - candlesPerScreen);
             }
 
-            const endIndex = Math.min(chart.data.length, chart.offset + candlesPerScreen);
+            const midPoint = Math.floor(candlesPerScreen / 2);
+            const endIndex = Math.min(chart.data.length, chart.offset + midPoint);
             const startIndex = Math.max(0, endIndex - candlesPerScreen);
             const visibleCandles = chart.data.slice(startIndex, endIndex);
 
@@ -1099,7 +1235,6 @@
             const candleWidth = Math.max(2, Math.min(15, (chartWidth / visibleCandles.length) - 2));
             const spacing = chartWidth / visibleCandles.length;
 
-            // Grid lines
             chart.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
             chart.ctx.lineWidth = 1;
             for (let i = 0; i <= 4; i++) {
@@ -1116,7 +1251,6 @@
                 chart.ctx.fillText(price.toFixed(2), chartPadding.left - 5, y + 3);
             }
 
-            // Draw candles
             visibleCandles.forEach((candle, index) => {
                 const x = chartPadding.left + spacing * index + spacing / 2;
 
@@ -1140,12 +1274,12 @@
                 chart.ctx.fillRect(x - candleWidth / 2, Math.min(yOpen, yClose), candleWidth, bodyHeight);
             });
 
-            // Draw trendlines
-            if (globalTrendlinesEnabled) {
-                drawTrendlines(chartId, visibleCandles, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding, spacing);
+            if (globalAnalysisEnabled && chart.analysis) {
+                drawSupportResistance(chartId, chart.analysis.supportResistance, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding);
+                drawTrendlines(chartId, chart.analysis.trendlines, visibleCandles, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding, spacing);
+                drawPredictions(chartId, chart.analysis.predictions, visibleCandles, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding, spacing);
             }
 
-            // Title
             const symbolName = document.getElementById(`symbol${chartId}`).options[document.getElementById(`symbol${chartId}`).selectedIndex].text;
             chart.ctx.fillStyle = '#fff';
             chart.ctx.font = 'bold 12px Arial';
@@ -1153,16 +1287,48 @@
             chart.ctx.fillText(symbolName, chart.canvas.width / 2, 18);
         }
 
-        function drawTrendlines(chartId, visibleCandles, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding, spacing) {
+        function drawSupportResistance(chartId, levels, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding) {
+            if (!levels || levels.length === 0) return;
+            
             const chart = charts[chartId];
             const ctx = chart.ctx;
-            
-            chart.trendlines.forEach(trendline => {
+
+            levels.forEach(level => {
+                const y = chartPadding.top + ((maxPrice + padding - level.price) / (priceRange + padding * 2)) * chartHeight;
+                
                 ctx.save();
-                ctx.strokeStyle = trendline.color;
+                ctx.strokeStyle = level.type === 'resistance' ? '#ef4444' : '#10b981';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([10, 5]);
+                ctx.globalAlpha = 0.6;
+
+                ctx.beginPath();
+                ctx.moveTo(chartPadding.left, y);
+                ctx.lineTo(chart.canvas.width - chartPadding.right, y);
+                ctx.stroke();
+
+                ctx.fillStyle = level.type === 'resistance' ? '#ef4444' : '#10b981';
+                ctx.globalAlpha = 1;
+                ctx.font = 'bold 9px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText(`${level.type.toUpperCase()} ${level.price.toFixed(2)}`, chart.canvas.width - chartPadding.right + 5, y + 3);
+
+                ctx.restore();
+            });
+        }
+
+        function drawTrendlines(chartId, trendlines, visibleCandles, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding, spacing) {
+            if (!trendlines || trendlines.length === 0) return;
+
+            const chart = charts[chartId];
+            const ctx = chart.ctx;
+
+            trendlines.forEach(trendline => {
+                ctx.save();
+                ctx.strokeStyle = trendline.type === 'resistance' ? '#f97316' : '#3b82f6';
                 ctx.lineWidth = 2;
                 ctx.setLineDash([5, 5]);
-                ctx.globalAlpha = 0.85;
+                ctx.globalAlpha = 0.75;
 
                 ctx.beginPath();
                 let firstPoint = true;
@@ -1184,66 +1350,58 @@
                 });
 
                 ctx.stroke();
-
-                // Label
-                if (trendline.label && trendline.points.length > 0) {
-                    const lastPoint = trendline.points[trendline.points.length - 1];
-                    const lastCandleIndex = visibleCandles.findIndex(c => Math.abs(c.x - lastPoint.x) < 30000);
-                    
-                    if (lastCandleIndex !== -1) {
-                        const labelX = chartPadding.left + spacing * lastCandleIndex + spacing / 2 + 8;
-                        const labelY = chartPadding.top + ((maxPrice + padding - lastPoint.y) / (priceRange + padding * 2)) * chartHeight;
-
-                        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                        ctx.globalAlpha = 1;
-                        const textWidth = ctx.measureText(trendline.label).width;
-                        ctx.fillRect(labelX - 2, labelY - 12, textWidth + 6, 14);
-
-                        ctx.fillStyle = trendline.color;
-                        ctx.font = 'bold 9px Arial';
-                        ctx.textAlign = 'left';
-                        ctx.fillText(trendline.label, labelX, labelY - 2);
-                    }
-                }
-
                 ctx.restore();
             });
-
-            updateTrendlineInfo(chartId);
         }
 
-        function addTrendline(chartId, points, label, color, patternType) {
-            const chart = charts[chartId];
-            chart.trendlines = chart.trendlines.filter(t => t.patternType !== patternType);
-            chart.trendlines.push({ points, label, color, patternType, timestamp: Date.now() });
-            if (chart.trendlines.length > 10) chart.trendlines.shift();
-            drawChart(chartId);
-        }
+        function drawPredictions(chartId, predictions, visibleCandles, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding, spacing) {
+            if (!predictions || predictions.length === 0) return;
 
-        function updateTrendlineInfo(chartId) {
             const chart = charts[chartId];
-            const infoEl = document.getElementById(`trendlineInfo${chartId}`);
-            const listEl = document.getElementById(`trendlineList${chartId}`);
+            const ctx = chart.ctx;
+            const lastCandle = chart.data[chart.data.length - 1];
             
-            if (chart.trendlines.length === 0 || !globalTrendlinesEnabled) {
-                infoEl.style.display = 'none';
-                return;
-            }
+            const startX = chartPadding.left + spacing * (visibleCandles.length - 1) + spacing / 2;
+            const startY = chartPadding.top + ((maxPrice + padding - lastCandle.c) / (priceRange + padding * 2)) * chartHeight;
 
-            infoEl.style.display = 'block';
-            listEl.innerHTML = '';
+            ctx.save();
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([3, 3]);
+            ctx.globalAlpha = 0.7;
 
-            chart.trendlines.slice(0, 3).forEach(tl => {
-                if (tl.label) {
-                    const item = document.createElement('div');
-                    item.className = 'trendline-item';
-                    item.innerHTML = `
-                        <div class="trendline-color" style="background: ${tl.color};"></div>
-                        <span>${tl.label}</span>
-                    `;
-                    listEl.appendChild(item);
-                }
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+
+            const predictionSpacing = spacing;
+            predictions.forEach((pred, index) => {
+                const x = startX + predictionSpacing * (index + 1);
+                const y = chartPadding.top + ((maxPrice + padding - pred.y) / (priceRange + padding * 2)) * chartHeight;
+                ctx.lineTo(x, y);
             });
+
+            ctx.stroke();
+
+            predictions.forEach((pred, index) => {
+                const x = startX + predictionSpacing * (index + 1);
+                const y = chartPadding.top + ((maxPrice + padding - pred.y) / (priceRange + padding * 2)) * chartHeight;
+                
+                ctx.fillStyle = '#fbbf24';
+                ctx.globalAlpha = 1;
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            ctx.fillStyle = '#fbbf24';
+            ctx.font = 'bold 9px Arial';
+            ctx.textAlign = 'left';
+            const lastPred = predictions[predictions.length - 1];
+            const lastX = startX + predictionSpacing * predictions.length;
+            const lastY = chartPadding.top + ((maxPrice + padding - lastPred.y) / (priceRange + padding * 2)) * chartHeight;
+            ctx.fillText(`PRED: ${lastPred.y.toFixed(2)}`, lastX + 5, lastY + 3);
+
+            ctx.restore();
         }
 
         function startSingleChart(chartId) {
@@ -1259,6 +1417,7 @@
             chart.currentCandle = null;
             chart.offset = 0;
             chart.autoScroll = true;
+            chart.analysis = {};
             
             updateStatus(chartId, 'loading', '📡 Connecting...');
             connectWebSocket(chartId);
@@ -1313,7 +1472,7 @@
                     updateInfoBar(chartId);
                     
                     if (chart.analyzer) {
-                        chart.analyzer.updateCandleData(chart.data, chart.timeframe);
+                        chart.analyzer.analyzeChart(chart.data, chart.timeframe);
                     }
                 } else if (data.msg_type === 'tick') {
                     const price = parseFloat(data.tick.quote);
@@ -1347,6 +1506,10 @@
                                     chart.offset--;
                                 }
                             }
+
+                            if (chart.analyzer) {
+                                chart.analyzer.analyzeChart(chart.data, chart.timeframe);
+                            }
                         } else {
                             chart.currentCandle.c = price;
                             chart.currentCandle.h = Math.max(chart.currentCandle.h, price);
@@ -1357,10 +1520,6 @@
 
                     drawChart(chartId);
                     updateInfoBar(chartId);
-                    
-                    if (chart.analyzer) {
-                        chart.analyzer.updateCandleData(chart.data, chart.timeframe);
-                    }
                 }
             };
 
@@ -1387,7 +1546,6 @@
             const currentPrice = currentCandle.c;
             const openPrice = firstCandle.o;
             const change = currentPrice - openPrice;
-            const changePercent = ((change / openPrice) * 100).toFixed(2);
 
             document.getElementById(`price${chartId}`).textContent = currentPrice.toFixed(2);
             
@@ -1499,10 +1657,6 @@
             oscillator.stop(audioContext.currentTime + 0.5);
         }
 
-        // ============================================
-        // GLOBAL CONTROL FUNCTIONS
-        // ============================================
-        
         function startAllCharts() {
             [1, 2, 3, 4].forEach(chartId => startSingleChart(chartId));
         }
@@ -1524,7 +1678,7 @@
                 chart.currentCandle = null;
                 chart.offset = 0;
                 chart.autoScroll = true;
-                chart.trendlines = [];
+                chart.analysis = {};
                 
                 if (chart.ws && chart.ws.readyState === WebSocket.OPEN) {
                     chart.ws.close();
@@ -1539,10 +1693,10 @@
                 [1, 2, 3, 4].forEach(chartId => {
                     const container = document.getElementById(`patterns${chartId}`);
                     container.innerHTML = '<div class="no-patterns">No patterns detected yet</div>';
-                    charts[chartId].trendlines = [];
                     if (charts[chartId].analyzer) {
                         charts[chartId].analyzer.detectedPatterns = [];
                     }
+                    charts[chartId].analysis = {};
                     drawChart(chartId);
                 });
                 
@@ -1551,41 +1705,39 @@
             }
         }
 
-        function toggleAllTrendlines() {
-            globalTrendlinesEnabled = !globalTrendlinesEnabled;
-            const btn = document.getElementById('globalTrendlineToggle');
+        function toggleAnalysisOverlay() {
+            globalAnalysisEnabled = !globalAnalysisEnabled;
+            const btn = document.getElementById('globalAnalysisToggle');
             
-            if (globalTrendlinesEnabled) {
-                btn.textContent = '📈 Trendlines: ON';
+            if (globalAnalysisEnabled) {
+                btn.textContent = '📊 Analysis: ON';
                 btn.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)';
+                [1, 2, 3, 4].forEach(chartId => {
+                    if (charts[chartId].analyzer && charts[chartId].data.length > 0) {
+                        charts[chartId].analyzer.analyzeChart(charts[chartId].data, charts[chartId].timeframe);
+                    }
+                });
             } else {
-                btn.textContent = '📈 Trendlines: OFF';
+                btn.textContent = '📊 Analysis: OFF';
                 btn.style.background = 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
                 [1, 2, 3, 4].forEach(chartId => {
-                    document.getElementById(`trendlineInfo${chartId}`).style.display = 'none';
+                    document.getElementById(`analysisOverlay${chartId}`).style.display = 'none';
                 });
             }
             
             [1, 2, 3, 4].forEach(chartId => drawChart(chartId));
         }
 
-        // ============================================
-        // INITIALIZATION
-        // ============================================
-        
         window.addEventListener('load', () => {
-            // Request notification permission
             if ('Notification' in window && Notification.permission === 'default') {
                 Notification.requestPermission();
             }
 
-            // Initialize all charts
             [1, 2, 3, 4].forEach(chartId => initChart(chartId));
 
-            // Auto-start all charts
             setTimeout(() => {
                 startAllCharts();
-                console.log('🚀 All 4 charts auto-started');
+                console.log('🚀 All 4 charts auto-started with enhanced analysis');
             }, 500);
         });
     </script>
