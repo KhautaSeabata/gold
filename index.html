@@ -3,1742 +3,1240 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deriv Multi-Chart Pattern Analyzer</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <title>MT5 Deriv Analyzer</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            min-height: 100vh;
-            padding: 15px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
             color: white;
+            overflow-x: hidden;
+            height: 100vh;
         }
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
-        }
-        h1 {
-            font-size: 2em;
-            margin-bottom: 10px;
-            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .subtitle {
-            color: #aaa;
-            font-size: 1em;
-        }
-        .global-controls {
+        
+        /* MT5 Header */
+        .mt5-header {
+            background: #1C1C1E;
+            padding: 12px 15px;
             display: flex;
-            justify-content: center;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-        }
-        button, select {
-            padding: 10px 20px;
-            font-size: 14px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
-            color: white;
-            font-weight: bold;
-            transition: transform 0.2s;
-        }
-        button:hover, select:hover {
-            transform: translateY(-2px);
-        }
-        .chart-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .chart-panel {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 15px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
+            justify-content: space-between;
+            border-bottom: 1px solid #2C2C2E;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
             gap: 10px;
         }
-        .chart-title {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #FF6B35;
+        .mt5-logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #007AFF;
         }
-        .chart-controls {
+        .account-info {
             display: flex;
-            gap: 5px;
+            flex-direction: column;
         }
-        .chart-controls select {
-            padding: 5px 10px;
-            font-size: 12px;
+        .account-number {
+            font-size: 11px;
+            color: #8E8E93;
         }
-        .chart-info {
+        .account-balance {
+            font-size: 14px;
+            color: #30D158;
+            font-weight: 600;
+        }
+        
+        /* Bottom Navigation */
+        .mt5-bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1C1C1E;
             display: flex;
             justify-content: space-around;
-            margin-bottom: 10px;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+            border-top: 1px solid #2C2C2E;
+            z-index: 1000;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            flex: 1;
+            padding: 4px;
+            color: #8E8E93;
+            transition: color 0.2s;
+        }
+        .nav-item.active {
+            color: #007AFF;
+        }
+        .nav-icon {
+            font-size: 26px;
+        }
+        .nav-label {
+            font-size: 10px;
+        }
+        
+        /* Pages */
+        .page-container {
+            display: none;
+            height: calc(100vh - 140px);
+            overflow-y: auto;
+        }
+        .page-container.active {
+            display: block;
+        }
+        
+        /* Charts Page */
+        .chart-toolbar {
+            background: #1C1C1E;
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow-x: auto;
+            border-bottom: 1px solid #2C2C2E;
+        }
+        .chart-toolbar::-webkit-scrollbar {
+            display: none;
+        }
+        .toolbar-select {
+            background: #2C2C2E;
+            border: none;
+            color: white;
+            padding: 8px 12px;
             border-radius: 8px;
-            font-size: 0.85em;
+            font-size: 13px;
+            outline: none;
+        }
+        .toolbar-btn {
+            background: #2C2C2E;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .toolbar-btn.active {
+            background: #007AFF;
+        }
+        
+        .chart-view {
+            position: relative;
+            height: calc(100vh - 260px);
+            background: #000;
+        }
+        .single-chart {
+            display: none;
+            height: 100%;
+            flex-direction: column;
+        }
+        .single-chart.active {
+            display: flex;
+        }
+        
+        .chart-info-bar {
+            background: #1C1C1E;
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            border-bottom: 1px solid #2C2C2E;
         }
         .info-item {
-            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
         }
         .info-label {
-            opacity: 0.7;
-            font-size: 0.9em;
+            color: #8E8E93;
         }
         .info-value {
-            font-weight: bold;
-            margin-top: 3px;
+            font-weight: 600;
+            font-size: 13px;
         }
-        .chart-container {
+        
+        .chart-canvas-container {
+            flex: 1;
             position: relative;
-            height: 350px;
-            background: #1a1a2e;
-            border-radius: 10px;
+            background: #000;
             overflow: hidden;
-            cursor: grab;
-            margin-bottom: 10px;
-        }
-        .chart-container:active {
-            cursor: grabbing;
         }
         canvas {
             width: 100%;
             height: 100%;
+            display: block;
         }
+        
         .zoom-controls {
             position: absolute;
-            top: 10px;
             right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
             display: flex;
             flex-direction: column;
-            gap: 5px;
-            z-index: 10;
+            gap: 8px;
         }
         .zoom-btn {
-            width: 35px;
-            height: 35px;
-            border-radius: 6px;
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
             border: none;
-            background: rgba(255, 255, 255, 0.9);
-            color: #333;
-            font-size: 18px;
+            background: rgba(28, 28, 30, 0.8);
+            color: white;
+            font-size: 20px;
             font-weight: bold;
             cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+        
+        .chart-tabs {
+            background: #1C1C1E;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
+            overflow-x: auto;
+            border-top: 1px solid #2C2C2E;
+            padding: 0 15px;
         }
-        .zoom-btn:hover {
-            background: white;
-            transform: scale(1.1);
+        .chart-tabs::-webkit-scrollbar {
+            display: none;
         }
-        .zoom-info {
-            width: 35px;
-            height: 25px;
-            border-radius: 6px;
-            background: rgba(255, 255, 255, 0.9);
-            color: #333;
-            font-size: 10px;
-            font-weight: bold;
+        .chart-tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            color: #8E8E93;
+            border-bottom: 2px solid transparent;
+            white-space: nowrap;
+            font-size: 14px;
+        }
+        .chart-tab.active {
+            color: #007AFF;
+            border-bottom-color: #007AFF;
+        }
+        
+        /* Signals Page */
+        .signals-header {
+            background: #1C1C1E;
+            padding: 15px;
+            border-bottom: 1px solid #2C2C2E;
+        }
+        .signals-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .signals-controls {
             display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .analysis-overlay {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.85);
-            color: white;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 10px;
-            z-index: 10;
-            max-width: 200px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .analysis-section {
-            margin-bottom: 8px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-        }
-        .analysis-section:last-child {
-            border-bottom: none;
-        }
-        .analysis-title {
-            font-weight: bold;
-            margin-bottom: 4px;
-            color: #fbbf24;
-            font-size: 11px;
-        }
-        .analysis-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            margin: 2px 0;
-            font-size: 9px;
-        }
-        .level-line {
-            width: 12px;
-            height: 2px;
-            border-radius: 1px;
-        }
-        .patterns-section {
-            margin-top: 10px;
-        }
-        .patterns-header {
-            font-size: 1em;
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: #FF6B35;
-        }
-        .patterns-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 10px;
         }
-        .pattern-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 10px;
-            padding: 12px;
+        .signal-filter-btn {
+            padding: 6px 12px;
+            background: #2C2C2E;
+            border: none;
             color: white;
-            font-size: 0.85em;
-            animation: slideIn 0.5s ease-out;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
         }
-        .pattern-card.bullish {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        .signal-filter-btn.active {
+            background: #007AFF;
         }
-        .pattern-card.bearish {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        
+        .signals-list {
+            padding: 15px;
         }
-        .pattern-card.neutral {
-            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-        }
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .pattern-name {
-            font-size: 1.1em;
-            font-weight: bold;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .pattern-timeframe {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 2px 8px;
+        .signal-card {
+            background: #1C1C1E;
             border-radius: 12px;
-            font-size: 0.7em;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-left: 4px solid #007AFF;
         }
-        .pattern-details {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            margin-top: 8px;
+        .signal-card.bullish {
+            border-left-color: #30D158;
         }
-        .pattern-row {
+        .signal-card.bearish {
+            border-left-color: #FF453A;
+        }
+        .signal-header {
             display: flex;
             justify-content: space-between;
-            padding: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            font-size: 0.9em;
+            align-items: center;
+            margin-bottom: 12px;
         }
-        .pattern-label {
-            opacity: 0.9;
+        .signal-name {
+            font-size: 16px;
+            font-weight: 600;
         }
-        .pattern-value {
-            font-weight: bold;
+        .signal-badge {
+            background: rgba(0, 122, 255, 0.2);
+            color: #007AFF;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .signal-badge.bullish {
+            background: rgba(48, 209, 88, 0.2);
+            color: #30D158;
+        }
+        .signal-badge.bearish {
+            background: rgba(255, 69, 58, 0.2);
+            color: #FF453A;
+        }
+        .signal-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .signal-detail {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+        .detail-label {
+            color: #8E8E93;
+        }
+        .detail-value {
+            font-weight: 600;
         }
         .confidence-bar {
-            margin-top: 8px;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
+            height: 4px;
+            background: #2C2C2E;
+            border-radius: 2px;
             overflow: hidden;
+            margin-top: 10px;
         }
         .confidence-fill {
             height: 100%;
-            background: white;
-            border-radius: 10px;
-            transition: width 0.5s ease;
+            background: #007AFF;
+            transition: width 0.3s;
         }
-        .no-patterns {
-            text-align: center;
-            padding: 20px;
-            color: #aaa;
-            font-size: 0.9em;
+        .confidence-fill.high {
+            background: #30D158;
         }
-        .alert-badge {
-            background: #fbbf24;
-            color: #1a1a2e;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.7em;
-            font-weight: bold;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.9; }
-        }
-        .status {
-            text-align: center;
-            padding: 8px;
-            border-radius: 6px;
+        .signal-time {
+            font-size: 11px;
+            color: #8E8E93;
             margin-top: 8px;
-            font-weight: bold;
-            font-size: 0.85em;
         }
-        .status.connected {
-            background: rgba(16, 185, 129, 0.2);
-            color: #10b981;
-        }
-        .status.disconnected {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-        }
-        .status.loading {
-            background: rgba(251, 191, 36, 0.2);
-            color: #fbbf24;
-        }
-        .green { color: #10b981; }
-        .red { color: #ef4444; }
         
-        @media (max-width: 1200px) {
-            .chart-grid {
-                grid-template-columns: 1fr;
-            }
+        .no-signals {
+            text-align: center;
+            padding: 60px 20px;
+            color: #8E8E93;
+        }
+        .no-signals-icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+        }
+        
+        /* Settings Page */
+        .settings-section {
+            background: #1C1C1E;
+            margin: 15px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .settings-item {
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2C2C2E;
+        }
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+        .settings-label {
+            font-size: 15px;
+        }
+        .settings-value {
+            color: #8E8E93;
+            font-size: 14px;
+        }
+        .toggle-switch {
+            width: 50px;
+            height: 30px;
+            background: #2C2C2E;
+            border-radius: 15px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .toggle-switch.active {
+            background: #30D158;
+        }
+        .toggle-thumb {
+            width: 26px;
+            height: 26px;
+            background: white;
+            border-radius: 13px;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+        }
+        .toggle-switch.active .toggle-thumb {
+            left: 22px;
+        }
+        
+        .green { color: #30D158; }
+        .red { color: #FF453A; }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 4px;
+            margin-right: 6px;
+        }
+        .status-connected {
+            background: #30D158;
+        }
+        .status-disconnected {
+            background: #FF453A;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>📊 Deriv Multi-Chart Pattern Analyzer</h1>
-        <div class="subtitle">Real-time Analysis | Support/Resistance → Trendlines → Momentum → Patterns → Predictions</div>
+    <!-- Header -->
+    <div class="mt5-header">
+        <div class="header-left">
+            <div class="mt5-logo">MT5</div>
+            <div class="account-info">
+                <div class="account-number">Demo #1234567</div>
+                <div class="account-balance">$10,000.00</div>
+            </div>
+        </div>
+        <div id="connectionStatus">
+            <span class="status-indicator status-disconnected"></span>
+        </div>
     </div>
 
-    <div class="global-controls">
-        <button onclick="startAllCharts()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">▶️ Start All Charts</button>
-        <button onclick="stopAllCharts()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">⏸️ Stop All</button>
-        <button onclick="refreshAllCharts()" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">🔄 Refresh All</button>
-        <button onclick="clearAllSignals()" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">🗑️ Clear All Signals</button>
-        <button onclick="toggleAnalysisOverlay()" id="globalAnalysisToggle" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);">📊 Analysis: ON</button>
-    </div>
+    <!-- Charts Page -->
+    <div class="page-container active" id="chartsPage">
+        <!-- Toolbar -->
+        <div class="chart-toolbar">
+            <select class="toolbar-select" id="numCharts" onchange="changeNumCharts()">
+                <option value="1">1 Chart</option>
+                <option value="2">2 Charts</option>
+                <option value="3">3 Charts</option>
+                <option value="4" selected>4 Charts</option>
+            </select>
+            <button class="toolbar-btn" onclick="startAllCharts()">▶ Start</button>
+            <button class="toolbar-btn" onclick="stopAllCharts()">⏸ Stop</button>
+            <button class="toolbar-btn" onclick="refreshAllCharts()">🔄</button>
+            <button class="toolbar-btn" id="analysisToggle" onclick="toggleAnalysis()">📊 ON</button>
+        </div>
 
-    <div class="chart-grid">
-        <!-- Chart 1 -->
-        <div class="chart-panel">
-            <div class="chart-header">
-                <div class="chart-title" id="chartTitle1">Chart 1</div>
-                <div class="chart-controls">
-                    <select id="symbol1">
+        <!-- Chart View -->
+        <div class="chart-view">
+            <!-- Chart 1 -->
+            <div class="single-chart active" id="chart1">
+                <div class="chart-info-bar">
+                    <div class="info-item">
+                        <div class="info-label">Symbol</div>
+                        <div class="info-value" id="symbolName1">Vol 25</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Price</div>
+                        <div class="info-value" id="price1">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Change</div>
+                        <div class="info-value" id="change1">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">H/L</div>
+                        <div class="info-value" id="highlow1">--</div>
+                    </div>
+                </div>
+                <div class="chart-toolbar">
+                    <select class="toolbar-select" id="symbol1" onchange="updateChart(1)">
                         <option value="R_10">Vol 10</option>
                         <option value="R_25" selected>Vol 25</option>
                         <option value="R_50">Vol 50</option>
                         <option value="R_75">Vol 75</option>
                         <option value="R_100">Vol 100</option>
-                        <option value="1HZ10V">Vol 10 (1s)</option>
-                        <option value="1HZ25V">Vol 25 (1s)</option>
-                        <option value="1HZ50V">Vol 50 (1s)</option>
-                        <option value="1HZ75V">Vol 75 (1s)</option>
-                        <option value="1HZ100V">Vol 100 (1s)</option>
                     </select>
-                    <select id="timeframe1">
+                    <select class="toolbar-select" id="timeframe1" onchange="updateChart(1)">
                         <option value="60" selected>1M</option>
-                        <option value="120">2M</option>
                         <option value="300">5M</option>
                         <option value="900">15M</option>
                         <option value="1800">30M</option>
                         <option value="3600">1H</option>
                     </select>
                 </div>
-            </div>
-            <div class="chart-info" id="info1">
-                <div class="info-item">
-                    <div class="info-label">Price</div>
-                    <div class="info-value" id="price1">--</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Change</div>
-                    <div class="info-value" id="change1">--</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">High</div>
-                    <div class="info-value" id="high1">--</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Low</div>
-                    <div class="info-value" id="low1">--</div>
+                <div class="chart-canvas-container">
+                    <canvas id="canvas1"></canvas>
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" onclick="zoom(1, 'in')">+</button>
+                        <button class="zoom-btn" onclick="zoom(1, 'out')">−</button>
+                    </div>
                 </div>
             </div>
-            <div class="chart-container" id="chartContainer1">
-                <canvas id="chartCanvas1"></canvas>
-                <div class="zoom-controls">
-                    <button class="zoom-btn" onclick="zoomChart(1, 'in')">+</button>
-                    <div class="zoom-info" id="zoom1">100</div>
-                    <button class="zoom-btn" onclick="zoomChart(1, 'out')">−</button>
-                </div>
-                <div class="analysis-overlay" id="analysisOverlay1"></div>
-            </div>
-            <div class="status loading" id="status1">Ready to start</div>
-            <div class="patterns-section">
-                <div class="patterns-header">🎯 Detected Patterns</div>
-                <div class="patterns-container" id="patterns1">
-                    <div class="no-patterns">No patterns detected yet</div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Chart 2 -->
-        <div class="chart-panel">
-            <div class="chart-header">
-                <div class="chart-title" id="chartTitle2">Chart 2</div>
-                <div class="chart-controls">
-                    <select id="symbol2">
+            <!-- Chart 2 -->
+            <div class="single-chart" id="chart2">
+                <div class="chart-info-bar">
+                    <div class="info-item">
+                        <div class="info-label">Symbol</div>
+                        <div class="info-value" id="symbolName2">Vol 50</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Price</div>
+                        <div class="info-value" id="price2">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Change</div>
+                        <div class="info-value" id="change2">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">H/L</div>
+                        <div class="info-value" id="highlow2">--</div>
+                    </div>
+                </div>
+                <div class="chart-toolbar">
+                    <select class="toolbar-select" id="symbol2" onchange="updateChart(2)">
                         <option value="R_10">Vol 10</option>
                         <option value="R_25">Vol 25</option>
                         <option value="R_50" selected>Vol 50</option>
                         <option value="R_75">Vol 75</option>
                         <option value="R_100">Vol 100</option>
-                        <option value="1HZ10V">Vol 10 (1s)</option>
-                        <option value="1HZ25V">Vol 25 (1s)</option>
-                        <option value="1HZ50V">Vol 50 (1s)</option>
-                        <option value="1HZ75V">Vol 75 (1s)</option>
-                        <option value="1HZ100V">Vol 100 (1s)</option>
                     </select>
-                    <select id="timeframe2">
+                    <select class="toolbar-select" id="timeframe2" onchange="updateChart(2)">
                         <option value="60">1M</option>
-                        <option value="120">2M</option>
                         <option value="300" selected>5M</option>
                         <option value="900">15M</option>
                         <option value="1800">30M</option>
                         <option value="3600">1H</option>
                     </select>
                 </div>
-            </div>
-            <div class="chart-info" id="info2">
-                <div class="info-item">
-                    <div class="info-label">Price</div>
-                    <div class="info-value" id="price2">--</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Change</div>
-                    <div class="info-value" id="change2">--</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">High</div>
-                    <div class="info-value" id="high2">--</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Low</div>
-                    <div class="info-value" id="low2">--</div>
+                <div class="chart-canvas-container">
+                    <canvas id="canvas2"></canvas>
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" onclick="zoom(2, 'in')">+</button>
+                        <button class="zoom-btn" onclick="zoom(2, 'out')">−</button>
+                    </div>
                 </div>
             </div>
-            <div class="chart-container" id="chartContainer2">
-                <canvas id="chartCanvas2"></canvas>
-                <div class="zoom-controls">
-                    <button class="zoom-btn" onclick="zoomChart(2, 'in')">+</button>
-                    <div class="zoom-info" id="zoom2">100</div>
-                    <button class="zoom-btn" onclick="zoomChart(2, 'out')">−</button>
-                </div>
-                <div class="analysis-overlay" id="analysisOverlay2"></div>
-            </div>
-            <div class="status loading" id="status2">Ready to start</div>
-            <div class="patterns-section">
-                <div class="patterns-header">🎯 Detected Patterns</div>
-                <div class="patterns-container" id="patterns2">
-                    <div class="no-patterns">No patterns detected yet</div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Chart 3 -->
-        <div class="chart-panel">
-            <div class="chart-header">
-                <div class="chart-title" id="chartTitle3">Chart 3</div>
-                <div class="chart-controls">
-                    <select id="symbol3">
+            <!-- Chart 3 -->
+            <div class="single-chart" id="chart3">
+                <div class="chart-info-bar">
+                    <div class="info-item">
+                        <div class="info-label">Symbol</div>
+                        <div class="info-value" id="symbolName3">Vol 75</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Price</div>
+                        <div class="info-value" id="price3">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Change</div>
+                        <div class="info-value" id="change3">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">H/L</div>
+                        <div class="info-value" id="highlow3">--</div>
+                    </div>
+                </div>
+                <div class="chart-toolbar">
+                    <select class="toolbar-select" id="symbol3" onchange="updateChart(3)">
                         <option value="R_10">Vol 10</option>
                         <option value="R_25">Vol 25</option>
                         <option value="R_50">Vol 50</option>
                         <option value="R_75" selected>Vol 75</option>
                         <option value="R_100">Vol 100</option>
-                        <option value="1HZ10V">Vol 10 (1s)</option>
-                        <option value="1HZ25V">Vol 25 (1s)</option>
-                        <option value="1HZ50V">Vol 50 (1s)</option>
-                        <option value="1HZ75V">Vol 75 (1s)</option>
-                        <option value="1HZ100V">Vol 100 (1s)</option>
                     </select>
-                    <select id="timeframe3">
+                    <select class="toolbar-select" id="timeframe3" onchange="updateChart(3)">
                         <option value="60">1M</option>
-                        <option value="120">2M</option>
                         <option value="300">5M</option>
                         <option value="900" selected>15M</option>
                         <option value="1800">30M</option>
                         <option value="3600">1H</option>
                     </select>
                 </div>
-            </div>
-            <div class="chart-info" id="info3">
-                <div class="info-item">
-                    <div class="info-label">Price</div>
-                    <div class="info-value" id="price3">--</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Change</div>
-                    <div class="info-value" id="change3">--</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">High</div>
-                    <div class="info-value" id="high3">--</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Low</div>
-                    <div class="info-value" id="low3">--</div>
+                <div class="chart-canvas-container">
+                    <canvas id="canvas3"></canvas>
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" onclick="zoom(3, 'in')">+</button>
+                        <button class="zoom-btn" onclick="zoom(3, 'out')">−</button>
+                    </div>
                 </div>
             </div>
-            <div class="chart-container" id="chartContainer3">
-                <canvas id="chartCanvas3"></canvas>
-                <div class="zoom-controls">
-                    <button class="zoom-btn" onclick="zoomChart(3, 'in')">+</button>
-                    <div class="zoom-info" id="zoom3">100</div>
-                    <button class="zoom-btn" onclick="zoomChart(3, 'out')">−</button>
-                </div>
-                <div class="analysis-overlay" id="analysisOverlay3"></div>
-            </div>
-            <div class="status loading" id="status3">Ready to start</div>
-            <div class="patterns-section">
-                <div class="patterns-header">🎯 Detected Patterns</div>
-                <div class="patterns-container" id="patterns3">
-                    <div class="no-patterns">No patterns detected yet</div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Chart 4 -->
-        <div class="chart-panel">
-            <div class="chart-header">
-                <div class="chart-title" id="chartTitle4">Chart 4</div>
-                <div class="chart-controls">
-                    <select id="symbol4">
+            <!-- Chart 4 -->
+            <div class="single-chart" id="chart4">
+                <div class="chart-info-bar">
+                    <div class="info-item">
+                        <div class="info-label">Symbol</div>
+                        <div class="info-value" id="symbolName4">Vol 100</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Price</div>
+                        <div class="info-value" id="price4">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Change</div>
+                        <div class="info-value" id="change4">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">H/L</div>
+                        <div class="info-value" id="highlow4">--</div>
+                    </div>
+                </div>
+                <div class="chart-toolbar">
+                    <select class="toolbar-select" id="symbol4" onchange="updateChart(4)">
                         <option value="R_10">Vol 10</option>
                         <option value="R_25">Vol 25</option>
                         <option value="R_50">Vol 50</option>
                         <option value="R_75">Vol 75</option>
                         <option value="R_100" selected>Vol 100</option>
-                        <option value="1HZ10V">Vol 10 (1s)</option>
-                        <option value="1HZ25V">Vol 25 (1s)</option>
-                        <option value="1HZ50V">Vol 50 (1s)</option>
-                        <option value="1HZ75V">Vol 75 (1s)</option>
-                        <option value="1HZ100V">Vol 100 (1s)</option>
                     </select>
-                    <select id="timeframe4">
+                    <select class="toolbar-select" id="timeframe4" onchange="updateChart(4)">
                         <option value="60">1M</option>
-                        <option value="120">2M</option>
                         <option value="300">5M</option>
                         <option value="900">15M</option>
                         <option value="1800" selected>30M</option>
                         <option value="3600">1H</option>
                     </select>
                 </div>
-            </div>
-            <div class="chart-info" id="info4">
-                <div class="info-item">
-                    <div class="info-label">Price</div>
-                    <div class="info-value" id="price4">--</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Change</div>
-                    <div class="info-value" id="change4">--</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">High</div>
-                    <div class="info-value" id="high4">--</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Low</div>
-                    <div class="info-value" id="low4">--</div>
+                <div class="chart-canvas-container">
+                    <canvas id="canvas4"></canvas>
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" onclick="zoom(4, 'in')">+</button>
+                        <button class="zoom-btn" onclick="zoom(4, 'out')">−</button>
+                    </div>
                 </div>
             </div>
-            <div class="chart-container" id="chartContainer4">
-                <canvas id="chartCanvas4"></canvas>
-                <div class="zoom-controls">
-                    <button class="zoom-btn" onclick="zoomChart(4, 'in')">+</button>
-                    <div class="zoom-info" id="zoom4">100</div>
-                    <button class="zoom-btn" onclick="zoomChart(4, 'out')">−</button>
-                </div>
-                <div class="analysis-overlay" id="analysisOverlay4"></div>
+        </div>
+
+        <!-- Chart Tabs -->
+        <div class="chart-tabs" id="chartTabs">
+            <div class="chart-tab active" onclick="switchChart(1)">Chart 1</div>
+            <div class="chart-tab" onclick="switchChart(2)">Chart 2</div>
+            <div class="chart-tab" onclick="switchChart(3)">Chart 3</div>
+            <div class="chart-tab" onclick="switchChart(4)">Chart 4</div>
+        </div>
+    </div>
+
+    <!-- Signals Page -->
+    <div class="page-container" id="signalsPage">
+        <div class="signals-header">
+            <div class="signals-title">Trading Signals</div>
+            <div class="signals-controls">
+                <button class="signal-filter-btn active" onclick="filterSignals('all')">All</button>
+                <button class="signal-filter-btn" onclick="filterSignals('bullish')">Bullish</button>
+                <button class="signal-filter-btn" onclick="filterSignals('bearish')">Bearish</button>
             </div>
-            <div class="status loading" id="status4">Ready to start</div>
-            <div class="patterns-section">
-                <div class="patterns-header">🎯 Detected Patterns</div>
-                <div class="patterns-container" id="patterns4">
-                    <div class="no-patterns">No patterns detected yet</div>
-                </div>
+        </div>
+        <div class="signals-list" id="signalsList">
+            <div class="no-signals">
+                <div class="no-signals-icon">📊</div>
+                <div>No signals detected yet</div>
+                <div style="font-size: 12px; margin-top: 8px;">Start charts to detect patterns</div>
             </div>
         </div>
     </div>
 
+    <!-- Settings Page -->
+    <div class="page-container" id="settingsPage">
+        <div class="settings-section">
+            <div class="settings-item">
+                <div class="settings-label">Pattern Analysis</div>
+                <div class="toggle-switch active" onclick="toggleSetting(this)">
+                    <div class="toggle-thumb"></div>
+                </div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-label">Sound Alerts</div>
+                <div class="toggle-switch active" onclick="toggleSetting(this)">
+                    <div class="toggle-thumb"></div>
+                </div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-label">Push Notifications</div>
+                <div class="toggle-switch" onclick="toggleSetting(this)">
+                    <div class="toggle-thumb"></div>
+                </div>
+            </div>
+        </div>
+        <div class="settings-section" style="margin-top: 20px;">
+            <div class="settings-item">
+                <div class="settings-label">Clear All Signals</div>
+                <button class="toolbar-btn" onclick="clearAllSignals()" style="background: #FF453A;">Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="mt5-bottom-nav">
+        <div class="nav-item active" onclick="switchPage('chartsPage')">
+            <div class="nav-icon">📈</div>
+            <div class="nav-label">Charts</div>
+        </div>
+        <div class="nav-item" onclick="switchPage('signalsPage')">
+            <div class="nav-icon">🎯</div>
+            <div class="nav-label">Signals</div>
+        </div>
+        <div class="nav-item" onclick="switchPage('settingsPage')">
+            <div class="nav-icon">⚙️</div>
+            <div class="nav-label">Settings</div>
+        </div>
+    </div>
+
     <script>
-        const FIREBASE_DB_URL = 'https://alerts-83c9b-default-rtdb.firebaseio.com';
+        const FIREBASE_URL = 'https://alerts-83c9b-default-rtdb.firebaseio.com';
         
-        let globalAnalysisEnabled = true;
-        let allDetectedPatterns = [];
+        let charts = {};
+        let currentChartView = 1;
+        let numActiveCharts = 4;
+        let analysisEnabled = true;
+        let allSignals = [];
+        let signalFilter = 'all';
 
-        const charts = {
-            1: { canvas: null, ctx: null, data: [], ws: null, symbol: 'R_25', timeframe: 60, currentCandle: null, zoom: 100, offset: 0, dragging: false, analyzer: null, analysis: {}, autoScroll: true },
-            2: { canvas: null, ctx: null, data: [], ws: null, symbol: 'R_50', timeframe: 300, currentCandle: null, zoom: 100, offset: 0, dragging: false, analyzer: null, analysis: {}, autoScroll: true },
-            3: { canvas: null, ctx: null, data: [], ws: null, symbol: 'R_75', timeframe: 900, currentCandle: null, zoom: 100, offset: 0, dragging: false, analyzer: null, analysis: {}, autoScroll: true },
-            4: { canvas: null, ctx: null, data: [], ws: null, symbol: 'R_100', timeframe: 1800, currentCandle: null, zoom: 100, offset: 0, dragging: false, analyzer: null, analysis: {}, autoScroll: true }
-        };
-
-        const chartPadding = { top: 30, right: 120, bottom: 30, left: 50 };
-
-        class PatternAnalyzer {
-            constructor(chartId) {
-                this.chartId = chartId;
-                this.detectedPatterns = [];
+        class ChartManager {
+            constructor(id) {
+                this.id = id;
+                this.canvas = document.getElementById(`canvas${id}`);
+                this.ctx = this.canvas.getContext('2d');
+                this.data = [];
+                this.ws = null;
+                this.symbol = document.getElementById(`symbol${id}`).value;
+                this.timeframe = parseInt(document.getElementById(`timeframe${id}`).value);
+                this.zoom = 80;
+                this.offset = 0;
+                this.dragging = false;
+                this.autoScroll = true;
+                this.analysis = {};
+                
+                this.resizeCanvas();
+                this.setupDrag();
             }
 
-            analyzeChart(candles, timeframe) {
-                if (candles.length < 20) return;
+            resizeCanvas() {
+                const container = this.canvas.parentElement;
+                this.canvas.width = container.clientWidth;
+                this.canvas.height = container.clientHeight;
+            }
 
-                const chart = charts[this.chartId];
-                chart.analysis = {
-                    supportResistance: this.findSupportResistance(candles),
-                    trendlines: this.findTrendlines(candles),
-                    momentum: this.calculateMomentum(candles),
-                    patterns: this.detectAllPatterns(candles, timeframe),
-                    predictions: this.generatePredictions(candles)
+            setupDrag() {
+                let startX, startOffset;
+                this.canvas.addEventListener('touchstart', (e) => {
+                    this.dragging = true;
+                    startX = e.touches[0].clientX;
+                    startOffset = this.offset;
+                    this.autoScroll = false;
+                });
+                this.canvas.addEventListener('touchmove', (e) => {
+                    if (!this.dragging) return;
+                    const deltaX = e.touches[0].clientX - startX;
+                    const candlesPerScreen = Math.floor(this.zoom);
+                    const pixelsPerCandle = this.canvas.width / candlesPerScreen;
+                    const candlesDelta = Math.round(deltaX / pixelsPerCandle);
+                    this.offset = Math.max(0, Math.min(this.data.length - candlesPerScreen, startOffset - candlesDelta));
+                    this.draw();
+                });
+                this.canvas.addEventListener('touchend', () => {
+                    this.dragging = false;
+                    if (this.offset >= this.data.length - this.zoom - 5) {
+                        this.autoScroll = true;
+                    }
+                });
+            }
+
+            connect() {
+                if (this.ws) this.ws.close();
+                
+                this.ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089');
+                
+                this.ws.onopen = () => {
+                    updateConnectionStatus(true);
+                    this.ws.send(JSON.stringify({ ticks: this.symbol, subscribe: 1 }));
+                    this.ws.send(JSON.stringify({
+                        ticks_history: this.symbol,
+                        count: 1000,
+                        end: 'latest',
+                        style: 'candles',
+                        granularity: this.timeframe
+                    }));
                 };
 
-                this.updateAnalysisOverlay(this.chartId);
-                drawChart(this.chartId);
+                this.ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.candles) {
+                        this.data = data.candles.map(c => ({
+                            x: c.epoch * 1000,
+                            o: parseFloat(c.open),
+                            h: parseFloat(c.high),
+                            l: parseFloat(c.low),
+                            c: parseFloat(c.close)
+                        }));
+                        this.draw();
+                        this.updateInfo();
+                        if (analysisEnabled) this.analyze();
+                    } else if (data.tick) {
+                        this.updateTick(parseFloat(data.tick.quote), data.tick.epoch * 1000);
+                    }
+                };
+
+                this.ws.onerror = () => updateConnectionStatus(false);
+                this.ws.onclose = () => updateConnectionStatus(false);
             }
 
-            findSupportResistance(candles) {
-                const levels = [];
-                const highs = candles.map(c => c.h);
-                const lows = candles.map(c => c.l);
+            updateTick(price, time) {
+                                const candleStart = Math.floor(time / (this.timeframe * 1000)) * (this.timeframe * 1000);
                 
-                const resistance = Math.max(...highs.slice(-20));
-                const support = Math.min(...lows.slice(-20));
+                if (!this.data.length || candleStart > this.data[this.data.length - 1].x) {
+                    this.data.push({ x: candleStart, o: price, h: price, l: price, c: price });
+                    if (this.data.length > 1000) this.data.shift();
+                    if (analysisEnabled) this.analyze();
+                } else {
+                    const last = this.data[this.data.length - 1];
+                    last.c = price;
+                    last.h = Math.max(last.h, price);
+                    last.l = Math.min(last.l, price);
+                }
                 
-                levels.push({ type: 'resistance', price: resistance, strength: 85 });
-                levels.push({ type: 'support', price: support, strength: 85 });
-
-                const pivots = this.findPivotLevels(candles);
-                pivots.forEach(p => levels.push(p));
-
-                return levels.slice(0, 5);
+                this.draw();
+                this.updateInfo();
             }
 
-            findPivotLevels(candles) {
-                const levels = [];
-                const recent = candles.slice(-50);
+            analyze() {
+                if (this.data.length < 30) return;
+                
+                const patterns = this.detectPatterns();
+                patterns.forEach(p => addSignal(p));
+            }
+
+            detectPatterns() {
+                const patterns = [];
+                const recent = this.data.slice(-50);
+                
+                // Simple pattern detection
                 const highs = recent.map(c => c.h);
                 const lows = recent.map(c => c.l);
-
-                for (let i = 2; i < recent.length - 2; i++) {
-                    if (highs[i] > highs[i-1] && highs[i] > highs[i-2] && 
-                        highs[i] > highs[i+1] && highs[i] > highs[i+2]) {
-                        levels.push({ type: 'resistance', price: highs[i], strength: 70 });
-                    }
-                    if (lows[i] < lows[i-1] && lows[i] < lows[i-2] && 
-                        lows[i] < lows[i+1] && lows[i] < lows[i+2]) {
-                        levels.push({ type: 'support', price: lows[i], strength: 70 });
-                    }
-                }
-
-                return levels.slice(-3);
-            }
-
-            findTrendlines(candles) {
-                const trendlines = [];
-                const highs = candles.map(c => c.h);
-                const lows = candles.map(c => c.l);
-                
-                const peaks = this.findPeaks(highs);
-                const troughs = this.findTroughs(lows);
-
-                if (peaks.length >= 2) {
-                    const recentPeaks = peaks.slice(-3);
-                    const points = recentPeaks.map(idx => ({ x: candles[idx].x, y: highs[idx] }));
-                    const slope = this.calculateSlope(recentPeaks.map((p, i) => [i, highs[p]]));
-                    trendlines.push({ 
-                        type: 'resistance',
-                        points: points,
-                        slope: slope,
-                        strength: 75,
-                        label: slope > 0 ? 'Rising Resistance' : 'Falling Resistance'
-                    });
-                }
-
-                if (troughs.length >= 2) {
-                    const recentTroughs = troughs.slice(-3);
-                    const points = recentTroughs.map(idx => ({ x: candles[idx].x, y: lows[idx] }));
-                    const slope = this.calculateSlope(recentTroughs.map((t, i) => [i, lows[t]]));
-                    trendlines.push({ 
-                        type: 'support',
-                        points: points,
-                        slope: slope,
-                        strength: 75,
-                        label: slope > 0 ? 'Rising Support' : 'Falling Support'
-                    });
-                }
-
-                return trendlines;
-            }
-
-            calculateMomentum(candles) {
-                const recent = candles.slice(-14);
                 const closes = recent.map(c => c.c);
                 
-                let gains = 0, losses = 0;
-                for (let i = 1; i < closes.length; i++) {
-                    const change = closes[i] - closes[i-1];
-                    if (change > 0) gains += change;
-                    else losses -= change;
+                // Trend detection
+                const slope = this.calculateSlope(closes);
+                if (Math.abs(slope) > 0.001) {
+                    const pattern = {
+                        id: Date.now() + Math.random(),
+                        chartId: this.id,
+                        name: slope > 0 ? 'Bullish Trend' : 'Bearish Trend',
+                        bias: slope > 0 ? 'bullish' : 'bearish',
+                        timeframe: this.timeframe,
+                        entry: closes[closes.length - 1].toFixed(5),
+                        tp1: (closes[closes.length - 1] + slope * 10).toFixed(5),
+                        tp2: (closes[closes.length - 1] + slope * 20).toFixed(5),
+                        tp3: (closes[closes.length - 1] + slope * 30).toFixed(5),
+                        sl: (closes[closes.length - 1] - slope * 15).toFixed(5),
+                        confidence: Math.min(95, 60 + Math.abs(slope) * 1000),
+                        timestamp: Date.now()
+                    };
+                    patterns.push(pattern);
                 }
                 
-                const rs = gains / (losses || 1);
-                const rsi = 100 - (100 / (1 + rs));
-                
-                const macd = this.calculateMACD(candles);
-                
-                let momentum = 'neutral';
-                if (rsi > 70) momentum = 'overbought';
-                else if (rsi < 30) momentum = 'oversold';
-                else if (rsi > 50 && macd > 0) momentum = 'bullish';
-                else if (rsi < 50 && macd < 0) momentum = 'bearish';
-
-                return { rsi: rsi.toFixed(1), macd: macd.toFixed(4), signal: momentum };
+                return patterns;
             }
 
-            calculateMACD(candles) {
-                const closes = candles.slice(-26).map(c => c.c);
-                const ema12 = this.calculateEMA(closes, 12);
-                const ema26 = this.calculateEMA(closes, 26);
-                return ema12 - ema26;
-            }
-
-            calculateEMA(data, period) {
-                const k = 2 / (period + 1);
-                let ema = data[0];
-                for (let i = 1; i < data.length; i++) {
-                    ema = data[i] * k + ema * (1 - k);
+            calculateSlope(data) {
+                const n = data.length;
+                let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+                for (let i = 0; i < n; i++) {
+                    sumX += i;
+                    sumY += data[i];
+                    sumXY += i * data[i];
+                    sumX2 += i * i;
                 }
-                return ema;
-            }
-
-            detectAllPatterns(candles, timeframe) {
-                this.detectTriangle(candles, timeframe, 'symmetrical');
-                this.detectTriangle(candles, timeframe, 'ascending');
-                this.detectTriangle(candles, timeframe, 'descending');
-                this.detectHeadAndShoulders(candles, timeframe, false);
-                this.detectHeadAndShoulders(candles, timeframe, true);
-                this.detectDoubleTopBottom(candles, timeframe, 'top');
-                this.detectDoubleTopBottom(candles, timeframe, 'bottom');
-                this.detectWedge(candles, timeframe, 'rising');
-                this.detectWedge(candles, timeframe, 'falling');
-                return this.detectedPatterns.length;
-            }
-
-            generatePredictions(candles) {
-                if (candles.length < 10) return [];
-                
-                const recent = candles.slice(-10);
-                const lastCandle = candles[candles.length - 1];
-                const avgMove = recent.reduce((sum, c, i, arr) => {
-                    if (i === 0) return 0;
-                    return sum + Math.abs(c.c - arr[i-1].c);
-                }, 0) / (recent.length - 1);
-
-                const trend = this.calculateSlope(recent.map((c, i) => [i, c.c]));
-                const predictions = [];
-
-                for (let i = 1; i <= 5; i++) {
-                    const predictedPrice = lastCandle.c + (trend * avgMove * i);
-                    const timestamp = lastCandle.x + (charts[this.chartId].timeframe * 1000 * i);
-                    predictions.push({ x: timestamp, y: predictedPrice });
-                }
-
-                return predictions;
-            }
-
-            detectTriangle(candles, timeframe, type) {
-                if (candles.length < 20) return;
-                const highs = candles.map(c => c.h);
-                const lows = candles.map(c => c.l);
-                const peaks = this.findPeaks(highs);
-                const troughs = this.findTroughs(lows);
-                if (peaks.length < 2 || troughs.length < 2) return;
-
-                const recentPeaks = peaks.slice(-3);
-                const recentTroughs = troughs.slice(-3);
-                const upperSlope = this.calculateSlope(recentPeaks.map((p, i) => [i, highs[p]]));
-                const lowerSlope = this.calculateSlope(recentTroughs.map((t, i) => [i, lows[t]]));
-
-                let isPattern = false;
-                let bias = 'neutral';
-
-                if (type === 'symmetrical' && upperSlope < -0.001 && lowerSlope > 0.001) {
-                    isPattern = true;
-                    bias = this.determineTrendBias(candles);
-                } else if (type === 'ascending' && Math.abs(upperSlope) < 0.002 && lowerSlope > 0.001) {
-                    isPattern = true;
-                    bias = 'bullish';
-                } else if (type === 'descending' && upperSlope < -0.001 && Math.abs(lowerSlope) < 0.002) {
-                    isPattern = true;
-                    bias = 'bearish';
-                }
-
-                if (isPattern) {
-                    const currentPrice = candles[candles.length - 1].c;
-                    const pattern = this.createPatternSignal(
-                        `${type.charAt(0).toUpperCase() + type.slice(1)} Triangle`,
-                        bias, currentPrice, timeframe, candles
-                    );
-                    this.addPattern(pattern);
-                }
-            }
-
-            detectHeadAndShoulders(candles, timeframe, inverse = false) {
-                if (candles.length < 25) return;
-                const prices = inverse ? candles.map(c => c.l) : candles.map(c => c.h);
-                const extremes = inverse ? this.findTroughs(prices) : this.findPeaks(prices);
-                if (extremes.length < 5) return;
-
-                const recent = extremes.slice(-5);
-                if (recent.length === 5) {
-                    const [ls, lh, head, rh, rs] = recent.map(i => prices[i]);
-                    const leftShoulderValid = Math.abs(ls - lh) < (head - ls) * 0.3;
-                    const rightShoulderValid = Math.abs(rs - rh) < (head - rs) * 0.3;
-                    const headHigher = inverse ? (head < ls && head < rs) : (head > ls && head > rs);
-                    const shouldersLevel = Math.abs(ls - rs) / ls < 0.02;
-
-                    if (leftShoulderValid && rightShoulderValid && headHigher && shouldersLevel) {
-                        const currentPrice = candles[candles.length - 1].c;
-                        const pattern = this.createPatternSignal(
-                            inverse ? 'Inverse H&S' : 'H&S',
-                            inverse ? 'bullish' : 'bearish',
-                            currentPrice, timeframe, candles
-                        );
-                        this.addPattern(pattern);
-                    }
-                }
-            }
-
-            detectDoubleTopBottom(candles, timeframe, type) {
-                if (candles.length < 20) return;
-                const prices = type === 'top' ? candles.map(c => c.h) : candles.map(c => c.l);
-                const extremes = type === 'top' ? this.findPeaks(prices) : this.findTroughs(prices);
-                if (extremes.length < 2) return;
-
-                const recent = extremes.slice(-2);
-                const [first, second] = recent.map(i => prices[i]);
-                const similarity = Math.abs(first - second) / first;
-                
-                if (similarity < 0.015) {
-                    const currentPrice = candles[candles.length - 1].c;
-                    const pattern = this.createPatternSignal(
-                        `Double ${type.charAt(0).toUpperCase() + type.slice(1)}`,
-                        type === 'top' ? 'bearish' : 'bullish',
-                        currentPrice, timeframe, candles
-                    );
-                    this.addPattern(pattern);
-                }
-            }
-
-            detectWedge(candles, timeframe, type) {
-                if (candles.length < 20) return;
-                const highs = candles.map(c => c.h);
-                const lows = candles.map(c => c.l);
-                const peaks = this.findPeaks(highs);
-                const troughs = this.findTroughs(lows);
-                if (peaks.length < 2 || troughs.length < 2) return;
-
-                const recentPeaks = peaks.slice(-3);
-                const recentTroughs = troughs.slice(-3);
-                const upperSlope = this.calculateSlope(recentPeaks.map((p, i) => [i, highs[p]]));
-                const lowerSlope = this.calculateSlope(recentTroughs.map((t, i) => [i, lows[t]]));
-
-                let isPattern = false;
-                let bias = 'neutral';
-
-                if (type === 'rising' && upperSlope > 0.001 && lowerSlope > 0.001 && lowerSlope > upperSlope) {
-                    isPattern = true;
-                    bias = 'bearish';
-                } else if (type === 'falling' && upperSlope < -0.001 && lowerSlope < -0.001 && upperSlope < lowerSlope) {
-                    isPattern = true;
-                    bias = 'bullish';
-                }
-
-                if (isPattern) {
-                    const currentPrice = candles[candles.length - 1].c;
-                    const pattern = this.createPatternSignal(
-                        `${type.charAt(0).toUpperCase() + type.slice(1)} Wedge`,
-                        bias, currentPrice, timeframe, candles
-                    );
-                    this.addPattern(pattern);
-                }
-            }
-
-            findPeaks(prices) {
-                const peaks = [];
-                for (let i = 2; i < prices.length - 2; i++) {
-                    if (prices[i] > prices[i - 1] && prices[i] > prices[i - 2] &&
-                        prices[i] > prices[i + 1] && prices[i] > prices[i + 2]) {
-                        peaks.push(i);
-                    }
-                }
-                return peaks;
-            }
-
-            findTroughs(prices) {
-                const troughs = [];
-                for (let i = 2; i < prices.length - 2; i++) {
-                    if (prices[i] < prices[i - 1] && prices[i] < prices[i - 2] &&
-                        prices[i] < prices[i + 1] && prices[i] < prices[i + 2]) {
-                        troughs.push(i);
-                    }
-                }
-                return troughs;
-            }
-
-            calculateSlope(points) {
-                if (points.length < 2) return 0;
-                const n = points.length;
-                const sumX = points.reduce((sum, p) => sum + p[0], 0);
-                const sumY = points.reduce((sum, p) => sum + p[1], 0);
-                const sumXY = points.reduce((sum, p) => sum + p[0] * p[1], 0);
-                const sumX2 = points.reduce((sum, p) => sum + p[0] * p[0], 0);
                 return (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
             }
 
-            determineTrendBias(candles) {
-                const recent = candles.slice(-20);
-                const startPrice = recent[0].o;
-                const endPrice = recent[recent.length - 1].c;
-                return endPrice > startPrice ? 'bullish' : 'bearish';
-            }
-
-            createPatternSignal(patternName, bias, currentPrice, timeframe, candles) {
-                const pipValue = 0.001;
-                let entry, tp1, tp2, tp3, sl;
-
-                if (bias === 'bullish') {
-                    entry = currentPrice * 1.0001;
-                    tp1 = entry + (10 * pipValue);
-                    tp2 = entry + (20 * pipValue);
-                    tp3 = entry + (30 * pipValue);
-                    sl = entry - (15 * pipValue);
-                } else if (bias === 'bearish') {
-                    entry = currentPrice * 0.9999;
-                    tp1 = entry - (10 * pipValue);
-                    tp2 = entry - (20 * pipValue);
-                    tp3 = entry - (30 * pipValue);
-                    sl = entry + (15 * pipValue);
-                } else {
-                    entry = currentPrice;
-                    tp1 = currentPrice + (10 * pipValue);
-                    tp2 = currentPrice + (20 * pipValue);
-                    tp3 = currentPrice + (30 * pipValue);
-                    sl = currentPrice - (15 * pipValue);
+            draw() {
+                if (!this.data.length) return;
+                
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                const padding = { top: 20, right: 10, bottom: 20, left: 50 };
+                const chartW = this.canvas.width - padding.left - padding.right;
+                const chartH = this.canvas.height - padding.top - padding.bottom;
+                
+                const candlesPerScreen = Math.floor(this.zoom);
+                if (this.autoScroll) {
+                    this.offset = Math.max(0, this.data.length - candlesPerScreen);
                 }
-
-                return {
-                    id: Date.now() + Math.random(),
-                    chartId: this.chartId,
-                    name: patternName,
-                    bias: bias,
-                    timeframe: timeframe,
-                    entry: entry.toFixed(5),
-                    tp1: tp1.toFixed(5),
-                    tp2: tp2.toFixed(5),
-                    tp3: tp3.toFixed(5),
-                    sl: sl.toFixed(5),
-                    currentPrice: currentPrice.toFixed(5),
-                    confidence: this.calculateConfidence(candles, bias),
-                    timestamp: Date.now(),
-                    status: 'active'
-                };
-            }
-
-            calculateConfidence(candles, bias) {
-                const recent = candles.slice(-10);
-                let confirming = 0;
-
-                for (let i = 1; i < recent.length; i++) {
-                    if (bias === 'bullish' && recent[i].c > recent[i - 1].c) confirming++;
-                    if (bias === 'bearish' && recent[i].c < recent[i - 1].c) confirming++;
-                }
-
-                let confidence = (confirming / (recent.length - 1)) * 100;
-                return Math.min(100, Math.round(confidence));
-            }
-
-            addPattern(pattern) {
-                const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
-                const existing = this.detectedPatterns.find(p => 
-                    p.name === pattern.name && 
-                    p.timeframe === pattern.timeframe && 
-                    p.timestamp > fiveMinutesAgo
-                );
-
-                if (!existing) {
-                    this.detectedPatterns.unshift(pattern);
-                    this.detectedPatterns = this.detectedPatterns.slice(0, 5);
-                    allDetectedPatterns.push(pattern);
-                    displayPattern(this.chartId, pattern);
-                    saveSignalToFirebase(pattern);
+                
+                const visible = this.data.slice(this.offset, this.offset + candlesPerScreen);
+                if (!visible.length) return;
+                
+                const prices = visible.flatMap(c => [c.h, c.l]);
+                const maxP = Math.max(...prices);
+                const minP = Math.min(...prices);
+                const range = maxP - minP;
+                const pad = range * 0.1;
+                
+                const candleW = Math.max(2, Math.min(12, chartW / visible.length - 2));
+                const spacing = chartW / visible.length;
+                
+                // Grid
+                this.ctx.strokeStyle = '#2C2C2E';
+                this.ctx.lineWidth = 1;
+                for (let i = 0; i <= 4; i++) {
+                    const y = padding.top + (chartH / 4) * i;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(padding.left, y);
+                    this.ctx.lineTo(this.canvas.width - padding.right, y);
+                    this.ctx.stroke();
                     
-                    if (pattern.confidence >= 85) {
-                        playNotificationSound();
-                        if ('Notification' in window && Notification.permission === 'granted') {
-                            new Notification('🎯 High Confidence Pattern!', {
-                                body: `${pattern.name} - ${pattern.bias.toUpperCase()} - ${pattern.confidence}%`
-                            });
-                        }
+                    const price = maxP + pad - (range + pad * 2) * (i / 4);
+                    this.ctx.fillStyle = '#8E8E93';
+                    this.ctx.font = '10px Arial';
+                    this.ctx.textAlign = 'right';
+                    this.ctx.fillText(price.toFixed(2), padding.left - 5, y + 3);
+                }
+                
+                // Candles
+                visible.forEach((c, i) => {
+                    const x = padding.left + spacing * i + spacing / 2;
+                    const yH = padding.top + ((maxP + pad - c.h) / (range + pad * 2)) * chartH;
+                    const yL = padding.top + ((maxP + pad - c.l) / (range + pad * 2)) * chartH;
+                    const yO = padding.top + ((maxP + pad - c.o) / (range + pad * 2)) * chartH;
+                    const yC = padding.top + ((maxP + pad - c.c) / (range + pad * 2)) * chartH;
+                    
+                    const isUp = c.c >= c.o;
+                    const color = isUp ? '#30D158' : '#FF453A';
+                    
+                    // Wick
+                    this.ctx.strokeStyle = color;
+                    this.ctx.lineWidth = Math.max(1, candleW / 4);
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, yH);
+                    this.ctx.lineTo(x, yL);
+                    this.ctx.stroke();
+                    
+                    // Body
+                    this.ctx.fillStyle = color;
+                    const bodyH = Math.max(Math.abs(yC - yO), 1);
+                    this.ctx.fillRect(x - candleW / 2, Math.min(yO, yC), candleW, bodyH);
+                });
+            }
+
+            updateInfo() {
+                if (!this.data.length) return;
+                
+                const current = this.data[this.data.length - 1];
+                const first = this.data[0];
+                const change = current.c - first.o;
+                
+                const prices = this.data.flatMap(c => [c.h, c.l]);
+                const high = Math.max(...prices);
+                const low = Math.min(...prices);
+                
+                document.getElementById(`price${this.id}`).textContent = current.c.toFixed(2);
+                
+                const changeEl = document.getElementById(`change${this.id}`);
+                changeEl.innerHTML = `<span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}</span>`;
+                
+                document.getElementById(`highlow${this.id}`).textContent = `${high.toFixed(2)}/${low.toFixed(2)}`;
+            }
+
+            disconnect() {
+                if (this.ws) this.ws.close();
+            }
+        }
+
+        // Initialize charts
+        for (let i = 1; i <= 4; i++) {
+            charts[i] = new ChartManager(i);
+        }
+
+        // Page switching
+        function switchPage(pageId) {
+            document.querySelectorAll('.page-container').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            
+            document.querySelectorAll('.nav-item').forEach((item, idx) => {
+                item.classList.remove('active');
+                if ((pageId === 'chartsPage' && idx === 0) ||
+                    (pageId === 'signalsPage' && idx === 1) ||
+                    (pageId === 'settingsPage' && idx === 2)) {
+                    item.classList.add('active');
+                }
+            });
+            
+            if (pageId === 'signalsPage') {
+                displaySignals();
+            }
+        }
+
+        // Chart switching
+        function switchChart(chartId) {
+            document.querySelectorAll('.single-chart').forEach(c => c.classList.remove('active'));
+            document.getElementById(`chart${chartId}`).classList.add('active');
+            
+            document.querySelectorAll('.chart-tab').forEach((tab, idx) => {
+                tab.classList.remove('active');
+                if (idx === chartId - 1) tab.classList.add('active');
+            });
+            
+            currentChartView = chartId;
+            charts[chartId].resizeCanvas();
+            charts[chartId].draw();
+        }
+
+        function changeNumCharts() {
+            numActiveCharts = parseInt(document.getElementById('numCharts').value);
+            const tabs = document.getElementById('chartTabs');
+            tabs.innerHTML = '';
+            for (let i = 1; i <= numActiveCharts; i++) {
+                const tab = document.createElement('div');
+                tab.className = `chart-tab ${i === 1 ? 'active' : ''}`;
+                tab.textContent = `Chart ${i}`;
+                tab.onclick = () => switchChart(i);
+                tabs.appendChild(tab);
+            }
+            switchChart(1);
+        }
+
+        function updateChart(id) {
+            const chart = charts[id];
+            chart.symbol = document.getElementById(`symbol${id}`).value;
+            chart.timeframe = parseInt(document.getElementById(`timeframe${id}`).value);
+            
+            const symbolEl = document.getElementById(`symbol${id}`);
+            document.getElementById(`symbolName${id}`).textContent = symbolEl.options[symbolEl.selectedIndex].text;
+            
+            if (chart.ws && chart.ws.readyState === WebSocket.OPEN) {
+                chart.disconnect();
+                setTimeout(() => chart.connect(), 300);
+            }
+        }
+
+        function zoom(id, dir) {
+            const chart = charts[id];
+            if (dir === 'in') {
+                chart.zoom = Math.max(20, chart.zoom - 10);
+            } else {
+                chart.zoom = Math.min(150, chart.zoom + 10);
+            }
+            chart.draw();
+        }
+
+        function startAllCharts() {
+            for (let i = 1; i <= numActiveCharts; i++) {
+                charts[i].connect();
+            }
+        }
+
+        function stopAllCharts() {
+            for (let i = 1; i <= numActiveCharts; i++) {
+                charts[i].disconnect();
+            }
+        }
+
+        function refreshAllCharts() {
+            stopAllCharts();
+            setTimeout(() => startAllCharts(), 500);
+        }
+
+        function toggleAnalysis() {
+            analysisEnabled = !analysisEnabled;
+            const btn = document.getElementById('analysisToggle');
+            btn.textContent = analysisEnabled ? '📊 ON' : '📊 OFF';
+            btn.style.background = analysisEnabled ? '#007AFF' : '#2C2C2E';
+        }
+
+        function updateConnectionStatus(connected) {
+            const indicator = document.querySelector('.status-indicator');
+            indicator.className = `status-indicator ${connected ? 'status-connected' : 'status-disconnected'}`;
+        }
+
+        // Signal management
+        function addSignal(signal) {
+            const exists = allSignals.find(s => 
+                s.name === signal.name && 
+                s.chartId === signal.chartId && 
+                Date.now() - s.timestamp < 300000
+            );
+            
+            if (!exists) {
+                allSignals.unshift(signal);
+                allSignals = allSignals.slice(0, 50);
+                saveSignalToFirebase(signal);
+                
+                if (signal.confidence >= 85) {
+                    playSound();
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification('High Confidence Signal!', {
+                            body: `${signal.name} - ${signal.bias.toUpperCase()}`
+                        });
                     }
                 }
-            }
-
-            updateAnalysisOverlay(chartId) {
-                if (!globalAnalysisEnabled) return;
-                
-                const overlay = document.getElementById(`analysisOverlay${chartId}`);
-                const chart = charts[chartId];
-                const a = chart.analysis;
-                
-                let html = '';
-                
-                if (a.supportResistance && a.supportResistance.length > 0) {
-                    html += '<div class="analysis-section">';
-                    html += '<div class="analysis-title">📊 Support/Resistance</div>';
-                    a.supportResistance.forEach(level => {
-                        const color = level.type === 'resistance' ? '#ef4444' : '#10b981';
-                        html += `<div class="analysis-item">
-                            <div class="level-line" style="background:${color}"></div>
-                            <span>${level.type}: ${level.price.toFixed(2)} (${level.strength}%)</span>
-                        </div>`;
-                    });
-                    html += '</div>';
-                }
-
-                if (a.trendlines && a.trendlines.length > 0) {
-                    html += '<div class="analysis-section">';
-                    html += '<div class="analysis-title">📈 Trendlines</div>';
-                    a.trendlines.forEach(tl => {
-                        const color = tl.type === 'resistance' ? '#f97316' : '#3b82f6';
-                        html += `<div class="analysis-item">
-                            <div class="level-line" style="background:${color}"></div>
-                            <span>${tl.label}</span>
-                        </div>`;
-                    });
-                    html += '</div>';
-                }
-
-                if (a.momentum) {
-                    html += '<div class="analysis-section">';
-                    html += '<div class="analysis-title">⚡ Momentum</div>';
-                    html += `<div class="analysis-item">RSI: ${a.momentum.rsi}</div>`;
-                    html += `<div class="analysis-item">MACD: ${a.momentum.macd}</div>`;
-                    html += `<div class="analysis-item">Signal: ${a.momentum.signal.toUpperCase()}</div>`;
-                    html += '</div>';
-                }
-
-                if (a.patterns !== undefined) {
-                    html += '<div class="analysis-section">';
-                    html += '<div class="analysis-title">🎯 Patterns</div>';
-                    html += `<div class="analysis-item">${a.patterns} detected</div>`;
-                    html += '</div>';
-                }
-
-                overlay.innerHTML = html;
-                overlay.style.display = html ? 'block' : 'none';
             }
         }
 
         async function saveSignalToFirebase(signal) {
             try {
-                const response = await fetch(`${FIREBASE_DB_URL}/signals/${signal.id}.json`, {
+                await fetch(`${FIREBASE_URL}/signals/${signal.id}.json`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ...signal, savedAt: new Date().toISOString() })
+                    body: JSON.stringify(signal)
                 });
-                if (response.ok) console.log('✅ Signal saved:', signal.name);
-            } catch (error) {
-                console.error('❌ Firebase save error:', error);
+            } catch (e) {
+                console.error('Firebase error:', e);
             }
         }
 
-        async function clearAllSignalsFromFirebase() {
+        async function loadSignalsFromFirebase() {
             try {
-                const response = await fetch(`${FIREBASE_DB_URL}/signals.json`, { method: 'DELETE' });
-                if (response.ok) console.log('✅ All signals cleared');
-            } catch (error) {
-                console.error('❌ Firebase clear error:', error);
-            }
-        }
-
-        function initChart(chartId) {
-            const chart = charts[chartId];
-            chart.canvas = document.getElementById(`chartCanvas${chartId}`);
-            chart.ctx = chart.canvas.getContext('2d');
-            chart.analyzer = new PatternAnalyzer(chartId);
-            
-            resizeCanvas(chartId);
-            window.addEventListener('resize', () => resizeCanvas(chartId));
-            
-            const container = document.getElementById(`chartContainer${chartId}`);
-            container.addEventListener('mousedown', (e) => startDrag(chartId, e));
-            container.addEventListener('mousemove', (e) => drag(chartId, e));
-            container.addEventListener('mouseup', () => endDrag(chartId));
-            container.addEventListener('mouseleave', () => endDrag(chartId));
-            
-            document.getElementById(`symbol${chartId}`).addEventListener('change', () => {
-                chart.symbol = document.getElementById(`symbol${chartId}`).value;
-                if (chart.ws) startSingleChart(chartId);
-            });
-            
-            document.getElementById(`timeframe${chartId}`).addEventListener('change', () => {
-                chart.timeframe = parseInt(document.getElementById(`timeframe${chartId}`).value);
-                if (chart.ws) startSingleChart(chartId);
-            });
-        }
-
-        function resizeCanvas(chartId) {
-            const chart = charts[chartId];
-            const container = chart.canvas.parentElement;
-            chart.canvas.width = container.clientWidth;
-            chart.canvas.height = container.clientHeight;
-            if (chart.data.length > 0) drawChart(chartId);
-        }
-
-        function startDrag(chartId, e) {
-            const chart = charts[chartId];
-            chart.dragging = true;
-            chart.dragStartX = e.clientX;
-            chart.dragStartOffset = chart.offset;
-            chart.autoScroll = false;
-        }
-
-        function drag(chartId, e) {
-            const chart = charts[chartId];
-            if (!chart.dragging) return;
-            
-            const deltaX = e.clientX - chart.dragStartX;
-            const candlesPerScreen = Math.max(20, Math.floor(chart.zoom));
-            const pixelsPerCandle = (chart.canvas.width - chartPadding.left - chartPadding.right) / candlesPerScreen;
-            const candlesDelta = Math.round(deltaX / pixelsPerCandle);
-            
-            chart.offset = Math.max(0, Math.min(
-                chart.data.length - candlesPerScreen,
-                chart.dragStartOffset - candlesDelta
-            ));
-            
-            drawChart(chartId);
-        }
-
-        function endDrag(chartId) {
-            const chart = charts[chartId];
-            chart.dragging = false;
-            const candlesPerScreen = Math.max(20, Math.floor(chart.zoom));
-            if (chart.offset >= chart.data.length - candlesPerScreen - 5) {
-                chart.autoScroll = true;
-            }
-        }
-
-        function zoomChart(chartId, direction) {
-            const chart = charts[chartId];
-            if (direction === 'in') {
-                chart.zoom = Math.max(20, chart.zoom - 10);
-            } else {
-                chart.zoom = Math.min(200, chart.zoom + 10);
-            }
-            document.getElementById(`zoom${chartId}`).textContent = Math.round((100 / chart.zoom) * 100);
-            
-            if (chart.autoScroll) {
-                const candlesPerScreen = Math.max(20, Math.floor(chart.zoom));
-                chart.offset = Math.max(0, chart.data.length - candlesPerScreen);
-            }
-            
-            drawChart(chartId);
-        }
-
-        function drawChart(chartId) {
-            const chart = charts[chartId];
-            if (!chart.ctx || chart.data.length === 0) return;
-
-            chart.ctx.clearRect(0, 0, chart.canvas.width, chart.canvas.height);
-
-            const chartWidth = chart.canvas.width - chartPadding.left - chartPadding.right;
-            const chartHeight = chart.canvas.height - chartPadding.top - chartPadding.bottom;
-
-            const candlesPerScreen = Math.max(20, Math.floor(chart.zoom));
-            if (chart.autoScroll) {
-                chart.offset = Math.max(0, chart.data.length - candlesPerScreen);
-            }
-
-            const midPoint = Math.floor(candlesPerScreen / 2);
-            const endIndex = Math.min(chart.data.length, chart.offset + midPoint);
-            const startIndex = Math.max(0, endIndex - candlesPerScreen);
-            const visibleCandles = chart.data.slice(startIndex, endIndex);
-
-            if (visibleCandles.length === 0) return;
-
-            const allPrices = visibleCandles.flatMap(c => [c.h, c.l]);
-            const maxPrice = Math.max(...allPrices);
-            const minPrice = Math.min(...allPrices);
-            const priceRange = maxPrice - minPrice;
-            const padding = priceRange * 0.1;
-
-            const candleWidth = Math.max(2, Math.min(15, (chartWidth / visibleCandles.length) - 2));
-            const spacing = chartWidth / visibleCandles.length;
-
-            chart.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-            chart.ctx.lineWidth = 1;
-            for (let i = 0; i <= 4; i++) {
-                const y = chartPadding.top + (chartHeight / 4) * i;
-                chart.ctx.beginPath();
-                chart.ctx.moveTo(chartPadding.left, y);
-                chart.ctx.lineTo(chart.canvas.width - chartPadding.right, y);
-                chart.ctx.stroke();
-
-                const price = maxPrice + padding - (priceRange + padding * 2) * (i / 4);
-                chart.ctx.fillStyle = '#888';
-                chart.ctx.font = '10px Arial';
-                chart.ctx.textAlign = 'right';
-                chart.ctx.fillText(price.toFixed(2), chartPadding.left - 5, y + 3);
-            }
-
-            visibleCandles.forEach((candle, index) => {
-                const x = chartPadding.left + spacing * index + spacing / 2;
-
-                const yHigh = chartPadding.top + ((maxPrice + padding - candle.h) / (priceRange + padding * 2)) * chartHeight;
-                const yLow = chartPadding.top + ((maxPrice + padding - candle.l) / (priceRange + padding * 2)) * chartHeight;
-                const yOpen = chartPadding.top + ((maxPrice + padding - candle.o) / (priceRange + padding * 2)) * chartHeight;
-                const yClose = chartPadding.top + ((maxPrice + padding - candle.c) / (priceRange + padding * 2)) * chartHeight;
-
-                const isUp = candle.c >= candle.o;
-                const color = isUp ? '#10b981' : '#ef4444';
-
-                chart.ctx.strokeStyle = color;
-                chart.ctx.lineWidth = Math.max(1, candleWidth / 4);
-                chart.ctx.beginPath();
-                chart.ctx.moveTo(x, yHigh);
-                chart.ctx.lineTo(x, yLow);
-                chart.ctx.stroke();
-
-                chart.ctx.fillStyle = color;
-                const bodyHeight = Math.max(Math.abs(yClose - yOpen), 1);
-                chart.ctx.fillRect(x - candleWidth / 2, Math.min(yOpen, yClose), candleWidth, bodyHeight);
-            });
-
-            if (globalAnalysisEnabled && chart.analysis) {
-                drawSupportResistance(chartId, chart.analysis.supportResistance, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding);
-                drawTrendlines(chartId, chart.analysis.trendlines, visibleCandles, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding, spacing);
-                drawPredictions(chartId, chart.analysis.predictions, visibleCandles, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding, spacing);
-            }
-
-            const symbolName = document.getElementById(`symbol${chartId}`).options[document.getElementById(`symbol${chartId}`).selectedIndex].text;
-            chart.ctx.fillStyle = '#fff';
-            chart.ctx.font = 'bold 12px Arial';
-            chart.ctx.textAlign = 'center';
-            chart.ctx.fillText(symbolName, chart.canvas.width / 2, 18);
-        }
-
-        function drawSupportResistance(chartId, levels, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding) {
-            if (!levels || levels.length === 0) return;
-            
-            const chart = charts[chartId];
-            const ctx = chart.ctx;
-
-            levels.forEach(level => {
-                const y = chartPadding.top + ((maxPrice + padding - level.price) / (priceRange + padding * 2)) * chartHeight;
-                
-                ctx.save();
-                ctx.strokeStyle = level.type === 'resistance' ? '#ef4444' : '#10b981';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([10, 5]);
-                ctx.globalAlpha = 0.6;
-
-                ctx.beginPath();
-                ctx.moveTo(chartPadding.left, y);
-                ctx.lineTo(chart.canvas.width - chartPadding.right, y);
-                ctx.stroke();
-
-                ctx.fillStyle = level.type === 'resistance' ? '#ef4444' : '#10b981';
-                ctx.globalAlpha = 1;
-                ctx.font = 'bold 9px Arial';
-                ctx.textAlign = 'left';
-                ctx.fillText(`${level.type.toUpperCase()} ${level.price.toFixed(2)}`, chart.canvas.width - chartPadding.right + 5, y + 3);
-
-                ctx.restore();
-            });
-        }
-
-        function drawTrendlines(chartId, trendlines, visibleCandles, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding, spacing) {
-            if (!trendlines || trendlines.length === 0) return;
-
-            const chart = charts[chartId];
-            const ctx = chart.ctx;
-
-            trendlines.forEach(trendline => {
-                ctx.save();
-                ctx.strokeStyle = trendline.type === 'resistance' ? '#f97316' : '#3b82f6';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([5, 5]);
-                ctx.globalAlpha = 0.75;
-
-                ctx.beginPath();
-                let firstPoint = true;
-
-                trendline.points.forEach(point => {
-                    const candleIndex = visibleCandles.findIndex(c => Math.abs(c.x - point.x) < 30000);
-                    
-                    if (candleIndex !== -1) {
-                        const x = chartPadding.left + spacing * candleIndex + spacing / 2;
-                        const y = chartPadding.top + ((maxPrice + padding - point.y) / (priceRange + padding * 2)) * chartHeight;
-
-                        if (firstPoint) {
-                            ctx.moveTo(x, y);
-                            firstPoint = false;
-                        } else {
-                            ctx.lineTo(x, y);
-                        }
-                    }
-                });
-
-                ctx.stroke();
-                ctx.restore();
-            });
-        }
-
-        function drawPredictions(chartId, predictions, visibleCandles, chartWidth, chartHeight, maxPrice, minPrice, priceRange, padding, spacing) {
-            if (!predictions || predictions.length === 0) return;
-
-            const chart = charts[chartId];
-            const ctx = chart.ctx;
-            const lastCandle = chart.data[chart.data.length - 1];
-            
-            const startX = chartPadding.left + spacing * (visibleCandles.length - 1) + spacing / 2;
-            const startY = chartPadding.top + ((maxPrice + padding - lastCandle.c) / (priceRange + padding * 2)) * chartHeight;
-
-            ctx.save();
-            ctx.strokeStyle = '#fbbf24';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([3, 3]);
-            ctx.globalAlpha = 0.7;
-
-            ctx.beginPath();
-            ctx.moveTo(startX, startY);
-
-            const predictionSpacing = spacing;
-            predictions.forEach((pred, index) => {
-                const x = startX + predictionSpacing * (index + 1);
-                const y = chartPadding.top + ((maxPrice + padding - pred.y) / (priceRange + padding * 2)) * chartHeight;
-                ctx.lineTo(x, y);
-            });
-
-            ctx.stroke();
-
-            predictions.forEach((pred, index) => {
-                const x = startX + predictionSpacing * (index + 1);
-                const y = chartPadding.top + ((maxPrice + padding - pred.y) / (priceRange + padding * 2)) * chartHeight;
-                
-                ctx.fillStyle = '#fbbf24';
-                ctx.globalAlpha = 1;
-                ctx.beginPath();
-                ctx.arc(x, y, 3, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            ctx.fillStyle = '#fbbf24';
-            ctx.font = 'bold 9px Arial';
-            ctx.textAlign = 'left';
-            const lastPred = predictions[predictions.length - 1];
-            const lastX = startX + predictionSpacing * predictions.length;
-            const lastY = chartPadding.top + ((maxPrice + padding - lastPred.y) / (priceRange + padding * 2)) * chartHeight;
-            ctx.fillText(`PRED: ${lastPred.y.toFixed(2)}`, lastX + 5, lastY + 3);
-
-            ctx.restore();
-        }
-
-        function startSingleChart(chartId) {
-            const chart = charts[chartId];
-            chart.symbol = document.getElementById(`symbol${chartId}`).value;
-            chart.timeframe = parseInt(document.getElementById(`timeframe${chartId}`).value);
-            
-            if (chart.ws && chart.ws.readyState === WebSocket.OPEN) {
-                chart.ws.close();
-            }
-
-            chart.data = [];
-            chart.currentCandle = null;
-            chart.offset = 0;
-            chart.autoScroll = true;
-            chart.analysis = {};
-            
-            updateStatus(chartId, 'loading', '📡 Connecting...');
-            connectWebSocket(chartId);
-        }
-
-        function connectWebSocket(chartId) {
-            const chart = charts[chartId];
-            const app_id = 1089;
-            chart.ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${app_id}`);
-
-            chart.ws.onopen = () => {
-                console.log(`Chart ${chartId} connected`);
-                updateStatus(chartId, 'connected', '🟢 Live');
-                
-                chart.ws.send(JSON.stringify({
-                    ticks: chart.symbol,
-                    subscribe: 1
-                }));
-
-                chart.ws.send(JSON.stringify({
-                    ticks_history: chart.symbol,
-                    count: 1000,
-                    end: 'latest',
-                    style: 'candles',
-                    granularity: chart.timeframe
-                }));
-            };
-
-            chart.ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                
-                if (data.error) {
-                    console.error(`Chart ${chartId} error:`, data.error);
-                    updateStatus(chartId, 'disconnected', `🔴 Error`);
-                    return;
+                const response = await fetch(`${FIREBASE_URL}/signals.json`);
+                const data = await response.json();
+                if (data) {
+                    allSignals = Object.values(data).sort((a, b) => b.timestamp - a.timestamp);
+                    displaySignals();
                 }
-
-                if (data.msg_type === 'candles' && data.candles) {
-                    chart.data = data.candles.map(c => ({
-                        x: c.epoch * 1000,
-                        o: parseFloat(c.open),
-                        h: parseFloat(c.high),
-                        l: parseFloat(c.low),
-                        c: parseFloat(c.close)
-                    }));
-
-                    if (chart.data.length > 0) {
-                        chart.currentCandle = { ...chart.data[chart.data.length - 1] };
-                    }
-
-                    drawChart(chartId);
-                    updateInfoBar(chartId);
-                    
-                    if (chart.analyzer) {
-                        chart.analyzer.analyzeChart(chart.data, chart.timeframe);
-                    }
-                } else if (data.msg_type === 'tick') {
-                    const price = parseFloat(data.tick.quote);
-                    const timestamp = data.tick.epoch * 1000;
-
-                    if (!chart.currentCandle) {
-                        chart.currentCandle = {
-                            x: Math.floor(timestamp / (chart.timeframe * 1000)) * (chart.timeframe * 1000),
-                            o: price,
-                            h: price,
-                            l: price,
-                            c: price
-                        };
-                        chart.data.push(chart.currentCandle);
-                    } else {
-                        const candleStart = Math.floor(timestamp / (chart.timeframe * 1000)) * (chart.timeframe * 1000);
-                        
-                        if (candleStart > chart.currentCandle.x) {
-                            chart.currentCandle = {
-                                x: candleStart,
-                                o: price,
-                                h: price,
-                                l: price,
-                                c: price
-                            };
-                            chart.data.push(chart.currentCandle);
-                            
-                            if (chart.data.length > 1000) {
-                                chart.data.shift();
-                                if (!chart.autoScroll && chart.offset > 0) {
-                                    chart.offset--;
-                                }
-                            }
-
-                            if (chart.analyzer) {
-                                chart.analyzer.analyzeChart(chart.data, chart.timeframe);
-                            }
-                        } else {
-                            chart.currentCandle.c = price;
-                            chart.currentCandle.h = Math.max(chart.currentCandle.h, price);
-                            chart.currentCandle.l = Math.min(chart.currentCandle.l, price);
-                            chart.data[chart.data.length - 1] = chart.currentCandle;
-                        }
-                    }
-
-                    drawChart(chartId);
-                    updateInfoBar(chartId);
-                }
-            };
-
-            chart.ws.onerror = (error) => {
-                console.error(`Chart ${chartId} WebSocket error:`, error);
-                updateStatus(chartId, 'disconnected', '🔴 Error');
-            };
-
-            chart.ws.onclose = () => {
-                console.log(`Chart ${chartId} closed`);
-                if (chart.data.length > 0) {
-                    updateStatus(chartId, 'disconnected', '🔴 Disconnected');
-                }
-            };
-        }
-
-        function updateInfoBar(chartId) {
-            const chart = charts[chartId];
-            if (chart.data.length === 0) return;
-
-            const currentCandle = chart.data[chart.data.length - 1];
-            const firstCandle = chart.data[0];
-            
-            const currentPrice = currentCandle.c;
-            const openPrice = firstCandle.o;
-            const change = currentPrice - openPrice;
-
-            document.getElementById(`price${chartId}`).textContent = currentPrice.toFixed(2);
-            
-            const changeEl = document.getElementById(`change${chartId}`);
-            const changeClass = change >= 0 ? 'green' : 'red';
-            changeEl.innerHTML = `<span class="${changeClass}">${change >= 0 ? '+' : ''}${change.toFixed(2)}</span>`;
-
-            const allPrices = chart.data.flatMap(c => [c.h, c.l]);
-            const high = Math.max(...allPrices);
-            const low = Math.min(...allPrices);
-
-            document.getElementById(`high${chartId}`).textContent = high.toFixed(2);
-            document.getElementById(`low${chartId}`).textContent = low.toFixed(2);
-        }
-
-        function updateStatus(chartId, type, message) {
-            const statusEl = document.getElementById(`status${chartId}`);
-            statusEl.className = `status ${type}`;
-            statusEl.textContent = message;
-        }
-
-        function displayPattern(chartId, pattern) {
-            const container = document.getElementById(`patterns${chartId}`);
-            
-            if (container.querySelector('.no-patterns')) {
-                container.innerHTML = '';
-            }
-
-            const highConfBadge = pattern.confidence >= 85 ? 
-                `<span class="alert-badge">🔥 ${pattern.confidence}%</span>` : '';
-
-            const card = document.createElement('div');
-            card.className = `pattern-card ${pattern.bias}`;
-            card.innerHTML = `
-                <div class="pattern-name">
-                    ${getBiasIcon(pattern.bias)} ${pattern.name}
-                    <span class="pattern-timeframe">${getTimeframeLabel(pattern.timeframe)}</span>
-                    ${highConfBadge}
-                </div>
-                <div class="pattern-details">
-                    <div class="pattern-row">
-                        <span class="pattern-label">Entry</span>
-                        <span class="pattern-value">${pattern.entry}</span>
-                    </div>
-                    <div class="pattern-row">
-                        <span class="pattern-label">TP1</span>
-                        <span class="pattern-value" style="color: #c7f9cc;">🎯 ${pattern.tp1}</span>
-                    </div>
-                    <div class="pattern-row">
-                        <span class="pattern-label">TP2</span>
-                        <span class="pattern-value" style="color: #a7f3d0;">🎯 ${pattern.tp2}</span>
-                    </div>
-                    <div class="pattern-row">
-                        <span class="pattern-label">TP3</span>
-                        <span class="pattern-value" style="color: #6ee7b7;">🎯 ${pattern.tp3}</span>
-                    </div>
-                    <div class="pattern-row">
-                        <span class="pattern-label">SL</span>
-                        <span class="pattern-value" style="color: #fca5a5;">🛑 ${pattern.sl}</span>
-                    </div>
-                </div>
-                <div class="confidence-bar">
-                    <div class="confidence-fill" style="width: ${pattern.confidence}%"></div>
-                </div>
-            `;
-
-            container.insertBefore(card, container.firstChild);
-
-            while (container.children.length > 3) {
-                container.removeChild(container.lastChild);
+            } catch (e) {
+                console.error('Firebase load error:', e);
             }
         }
 
-        function getBiasIcon(bias) {
-            switch(bias) {
-                case 'bullish': return '📈';
-                case 'bearish': return '📉';
-                default: return '📊';
+        function displaySignals() {
+            const container = document.getElementById('signalsList');
+            
+            let filtered = allSignals;
+            if (signalFilter !== 'all') {
+                filtered = allSignals.filter(s => s.bias === signalFilter);
+            }
+            
+            if (!filtered.length) {
+                container.innerHTML = `
+                    <div class="no-signals">
+                        <div class="no-signals-icon">📊</div>
+                        <div>No ${signalFilter === 'all' ? '' : signalFilter} signals</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = filtered.map(s => `
+                <div class="signal-card ${s.bias}">
+                    <div class="signal-header">
+                        <div class="signal-name">${s.name}</div>
+                        <div class="signal-badge ${s.bias}">${s.bias.toUpperCase()}</div>
+                    </div>
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <span class="detail-label">Entry:</span>
+                            <span class="detail-value">${s.entry}</span>
+                        </div>
+                        <div class="signal-detail">
+                            <span class="detail-label">TP1:</span>
+                            <span class="detail-value green">${s.tp1}</span>
+                        </div>
+                        <div class="signal-detail">
+                            <span class="detail-label">TP2:</span>
+                            <span class="detail-value green">${s.tp2}</span>
+                        </div>
+                        <div class="signal-detail">
+                            <span class="detail-label">TP3:</span>
+                            <span class="detail-value green">${s.tp3}</span>
+                        </div>
+                        <div class="signal-detail">
+                            <span class="detail-label">SL:</span>
+                            <span class="detail-value red">${s.sl}</span>
+                        </div>
+                        <div class="signal-detail">
+                            <span class="detail-label">TF:</span>
+                            <span class="detail-value">${getTimeframeLabel(s.timeframe)}</span>
+                        </div>
+                    </div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill ${s.confidence >= 85 ? 'high' : ''}" style="width: ${s.confidence}%"></div>
+                    </div>
+                    <div class="signal-time">${new Date(s.timestamp).toLocaleString()}</div>
+                </div>
+            `).join('');
+        }
+
+        function filterSignals(type) {
+            signalFilter = type;
+            document.querySelectorAll('.signal-filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if ((type === 'all' && btn.textContent === 'All') ||
+                    (type === 'bullish' && btn.textContent === 'Bullish') ||
+                    (type === 'bearish' && btn.textContent === 'Bearish')) {
+                    btn.classList.add('active');
+                }
+            });
+            displaySignals();
+        }
+
+        async function clearAllSignals() {
+            if (confirm('Clear all signals?')) {
+                try {
+                    await fetch(`${FIREBASE_URL}/signals.json`, { method: 'DELETE' });
+                    allSignals = [];
+                    displaySignals();
+                } catch (e) {
+                    console.error('Firebase clear error:', e);
+                }
             }
         }
 
         function getTimeframeLabel(tf) {
-            switch(tf) {
-                case 60: return '1M';
-                case 120: return '2M';
-                case 300: return '5M';
-                case 900: return '15M';
-                case 1800: return '30M';
-                case 3600: return '1H';
-                default: return `${tf}s`;
-            }
+            const labels = { 60: '1M', 300: '5M', 900: '15M', 1800: '30M', 3600: '1H' };
+            return labels[tf] || `${tf}s`;
         }
 
-        function playNotificationSound() {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
-            
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.5);
+        function toggleSetting(el) {
+            el.classList.toggle('active');
         }
 
-        function startAllCharts() {
-            [1, 2, 3, 4].forEach(chartId => startSingleChart(chartId));
+        function playSound() {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 800;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.3);
         }
 
-        function stopAllCharts() {
-            [1, 2, 3, 4].forEach(chartId => {
-                const chart = charts[chartId];
-                if (chart.ws && chart.ws.readyState === WebSocket.OPEN) {
-                    chart.ws.close();
-                }
-                updateStatus(chartId, 'disconnected', '⏸️ Stopped');
-            });
-        }
-
-        function refreshAllCharts() {
-            [1, 2, 3, 4].forEach(chartId => {
-                const chart = charts[chartId];
-                chart.data = [];
-                chart.currentCandle = null;
-                chart.offset = 0;
-                chart.autoScroll = true;
-                chart.analysis = {};
-                
-                if (chart.ws && chart.ws.readyState === WebSocket.OPEN) {
-                    chart.ws.close();
-                }
-                
-                setTimeout(() => startSingleChart(chartId), 200 * chartId);
-            });
-        }
-
-        function clearAllSignals() {
-            if (confirm('Clear all signals from all charts and Firebase?')) {
-                [1, 2, 3, 4].forEach(chartId => {
-                    const container = document.getElementById(`patterns${chartId}`);
-                    container.innerHTML = '<div class="no-patterns">No patterns detected yet</div>';
-                    if (charts[chartId].analyzer) {
-                        charts[chartId].analyzer.detectedPatterns = [];
-                    }
-                    charts[chartId].analysis = {};
-                    drawChart(chartId);
-                });
-                
-                allDetectedPatterns = [];
-                clearAllSignalsFromFirebase();
-            }
-        }
-
-        function toggleAnalysisOverlay() {
-            globalAnalysisEnabled = !globalAnalysisEnabled;
-            const btn = document.getElementById('globalAnalysisToggle');
-            
-            if (globalAnalysisEnabled) {
-                btn.textContent = '📊 Analysis: ON';
-                btn.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)';
-                [1, 2, 3, 4].forEach(chartId => {
-                    if (charts[chartId].analyzer && charts[chartId].data.length > 0) {
-                        charts[chartId].analyzer.analyzeChart(charts[chartId].data, charts[chartId].timeframe);
-                    }
-                });
-            } else {
-                btn.textContent = '📊 Analysis: OFF';
-                btn.style.background = 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
-                [1, 2, 3, 4].forEach(chartId => {
-                    document.getElementById(`analysisOverlay${chartId}`).style.display = 'none';
-                });
-            }
-            
-            [1, 2, 3, 4].forEach(chartId => drawChart(chartId));
-        }
-
+        // Initialize
         window.addEventListener('load', () => {
             if ('Notification' in window && Notification.permission === 'default') {
                 Notification.requestPermission();
             }
-
-            [1, 2, 3, 4].forEach(chartId => initChart(chartId));
-
-            setTimeout(() => {
-                startAllCharts();
-                console.log('🚀 All 4 charts auto-started with enhanced analysis');
-            }, 500);
+            
+            loadSignalsFromFirebase();
+            
+            window.addEventListener('resize', () => {
+                Object.values(charts).forEach(c => {
+                    c.resizeCanvas();
+                    c.draw();
+                });
+            });
+            
+            setTimeout(() => startAllCharts(), 500);
         });
     </script>
 </body>
