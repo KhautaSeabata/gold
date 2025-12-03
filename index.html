@@ -1,1 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMC MT5 Deriv Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: white;
+            overflow-x: hidden;
+            height: 100vh;
+        }
+        
+        /* MT5 Header */
+        .mt5-header {
+            background: #1C1C1E;
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #2C2C2E;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .mt5-logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #007AFF;
+        }
+        .account-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .account-number {
+            font-size: 11px;
+            color: #8E8E93;
+        }
+        .account-balance {
+            font-size: 14px;
+            color: #30D158;
+            font-weight: 600;
+        }
+        
+        /* Bottom Navigation */
+        .mt5-bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1C1C1E;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+            border-top: 1px solid #2C2C2E;
+            z-index: 1000;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            flex: 1;
+            padding: 4px;
+            color: #8E8E93;
+            transition: color 0.2s;
+        }
+        .nav-item.active {
+            color: #007AFF;
+        }
+        .nav-icon {
+            font-size: 26px;
+        }
+        .nav-label {
+            font-size: 10px;
+        }
+        
+        /* Pages */
+        .page-container {
+            display: none;
+            height: calc(100vh - 140px);
+            overflow-y: auto;
+        }
+        .page-container.active {
+            display: block;
+        }
+        
+        /* Charts Page */
+        .chart-toolbar {
+            background: #1C1C1E;
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow-x: auto;
+            border-bottom: 1px solid #2C2C2E;
+        }
+        .chart-toolbar::-webkit-scrollbar {
+            display: none;
+        }
+        .toolbar-select {
+            background: #2C2C2E;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+        }
+        .toolbar-btn {
+            background: #2C2C2E;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .toolbar-btn.active {
+            background: #007AFF;
+        }
+        
+        .chart-view {
+            position: relative;
+            height: calc(100vh - 260px);
+            background: #000;
+        }
+        .single-chart {
+            display: none;
+            height: 100%;
+            flex-direction: column;
+        }
+        .single-chart.active {
+            display: flex;
+        }
+        
+        .chart-info-bar {
+            background: #1C1C1E;
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            border-bottom: 1px solid #2C2C2E;
+        }
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .info-label {
+            color: #8E8E93;
+        }
+        .info-value {
+            font-weight: 600;
+            font-size: 13px;
+        }
+        
+         .chart-canvas-container {
+            flex: 1;
+            position: relative;
+            background: #000;
+            overflow: hidden;
+            -webkit-overflow-scrolling: touch;
+             
+        }
+        .chart-canvas-container:active {
+            cursor: grabbing;
+        }
+        .chart-canvas-container::-webkit-scrollbar {
+            height: 0;
+            display: none;
+        }
+        .chart-canvas-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .chart-canvas-container::-webkit-scrollbar-thumb {
+            background: transparent;
+        }
+         canvas {
+            width: 100%;
+            height: 100%;
+             padding-right: 10%;
+            display: block;
+        }
+        
+        .zoom-controls {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            border: none;
+            background: rgba(28, 28, 30, 0.8);
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+        
+        .chart-tabs {
+            background: #1C1C1E;
+            display: flex;
+            overflow-x: auto;
+            border-top: 1px solid #2C2C2E;
+            padding: 0 15px;
+        }
+        .chart-tabs::-webkit-scrollbar {
+            display: none;
+        }
+        .chart-tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            color: #8E8E93;
+            border-bottom: 2px solid transparent;
+            white-space: nowrap;
+            font-size: 14px;
+        }
+        .chart-tab.active {
+            color: #007AFF;
+            border-bottom-color: #007AFF;
+        }
+        
+        /* Signals Page */
+        .signals-header {
+            background: #1C1C1E;
+            padding: 15px;
+            border-bottom: 1px solid #2C2C2E;
+        }
+        .signals-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .signals-controls {
+            display: flex;
+            gap: 10px;
+        }
+        .signal-filter-btn {
+            padding: 6px 12px;
+            background: #2C2C2E;
+            border: none;
+            color: white;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .signal-filter-btn.active {
+            background: #007AFF;
+        }
+        
+        .signals-list {
+            padding: 15px;
+        }
+        .signal-card {
+            background: #1C1C1E;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-left: 4px solid #007AFF;
+        }
+        .signal-card.bullish {
+            border-left-color: #30D158;
+        }
+        .signal-card.bearish {
+            border-left-color: #FF453A;
+        }
+        .signal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .signal-name {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .signal-symbol {
+            font-size: 13px;
+            color: #8E8E93;
+            margin-top: 2px;
+        }
+        .signal-badge {
+            background: rgba(0, 122, 255, 0.2);
+            color: #007AFF;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .signal-badge.bullish {
+            background: rgba(48, 209, 88, 0.2);
+            color: #30D158;
+        }
+        .signal-badge.bearish {
+            background: rgba(255, 69, 58, 0.2);
+            color: #FF453A;
+        }
+        .signal-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .signal-detail {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+        .detail-label {
+            color: #8E8E93;
+        }
+        .detail-value {
+            font-weight: 600;
+        }
+        .confidence-bar {
+            height: 4px;
+            background: #2C2C2E;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .confidence-fill {
+            height: 100%;
+            background: #007AFF;
+            transition: width 0.3s;
+        }
+        .confidence-fill.high {
+            background: #30D158;
+        }
+        .signal-time {
+            font-size: 11px;
+            color: #8E8E93;
+            margin-top: 8px;
+        }
+        
+        .no-signals {
+            text-align: center;
+            padding: 60px 20px;
+            color: #8E8E93;
+        }
+        .no-signals-icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+        }
+        
+        /* Settings Page */
+        .settings-section {
+            background: #1C1C1E;
+            margin: 15px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .settings-item {
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2C2C2E;
+        }
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+        .settings-label {
+            font-size: 15px;
+        }
+        .settings-value {
+            color: #8E8E93;
+            font-size: 14px;
+        }
+        .toggle-switch {
+            width: 50px;
+            height: 30px;
+            background: #2C2C2E;
+            border-radius: 15px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .toggle-switch.active {
+            background: #30D158;
+        }
+        .toggle-thumb {
+            width: 26px;
+            height: 26px;
+            background: white;
+            border-radius: 13px;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+        }
+        .toggle-switch.active .toggle-thumb {
+            left: 22px;
+        }
+        
+        .green { color: #30D158; }
+        .red { color: #FF453A; }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 4px;
+            margin-right: 6px;
+        }
+        .status-connected {
+            background: #30D158;
+        }
+        .status-disconnected {
+            background: #FF453A;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="mt5-header">
+        <div class="header-left">
+            <div class="mt5-logo">SMC</div>
+            <div class="account-info">
+                <div class="account-number">Demo #1234567</div>
+                <div class="account-balance">$10,000.00</div>
+            </div>
+        </div>
+        <div id="connectionStatus">
+            <span class="status-indicator status-disconnected"></span>
+        </div>
+    </div>
 
+    <!-- Charts Page -->
+    <div class="page-container active" id="chartsPage">
+        <!-- Toolbar -->
+        <div class="chart-toolbar">
+            <select class="toolbar-select" id="numCharts" onchange="changeNumCharts()">
+                <option value="1">1 Chart</option>
+                <option value="2">2 Charts</option>
+                <option value="3">3 Charts</option>
+                <option value="4" selected>4 Charts</option>
+            </select>
+            <button class="toolbar-btn" onclick="startAllCharts()">▶ Start</button>
+            <button class="toolbar-btn" onclick="stopAllCharts()">⏸ Stop</button>
+            <button class="toolbar-btn" onclick="refreshAllCharts()">🔄</button>
+            <button class="toolbar-btn active" id="analysisToggle" onclick="toggleAnalysis()">📊 SMC ON</button>
+        </div>
+
+        <!-- Chart View -->
+        <div class="chart-view">
+            <!-- Chart 1 -->
+            <div class="single-chart active" id="chart1">
+                <div class="chart-info-bar">
+                    <div class="info-item">
+                        <div class="info-label">Symbol</div>
+                        <div class="info-value" id="symbolName1">Vol 25</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Price</div>
+                        <div class="info-value" id="price1">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Change</div>
+                        <div class="info-value" id="change1">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">H/L</div>
+                        <div class="info-value" id="highlow1">--</div>
+                    </div>
+                </div>
+                <div class="chart-toolbar">
+                    <select class="toolbar-select" id="symbol1" onchange="updateChart(1)">
+                        <option value="R_10">Vol 10</option>
+                        <option value="R_25" selected>Vol 25</option>
+                        <option value="R_50">Vol 50</option>
+                        <option value="R_75">Vol 75</option>
+                        <option value="R_100">Vol 100</option>
+                    </select>
+                    <select class="toolbar-select" id="timeframe1" onchange="updateChart(1)">
+                        <option value="60" selected>1M</option>
+                        <option value="300">5M</option>
+                        <option value="900">15M</option>
+                        <option value="1800">30M</option>
+                        <option value="3600">1H</option>
+                    </select>
+                </div>
+                <div class="chart-canvas-container">
+                    <canvas id="canvas1"></canvas>
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" onclick="zoom(1, 'in')">+</button>
+                        <button class="zoom-btn" onclick="zoom(1, 'out')">−</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart 2 -->
+            <div class="single-chart" id="chart2">
+                <div class="chart-info-bar">
+                    <div class="info-item">
+                        <div class="info-label">Symbol</div>
+                        <div class="info-value" id="symbolName2">Vol 50</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Price</div>
+                        <div class="info-value" id="price2">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Change</div>
+                        <div class="info-value" id="change2">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">H/L</div>
+                        <div class="info-value" id="highlow2">--</div>
+                    </div>
+                </div>
+                <div class="chart-toolbar">
+                    <select class="toolbar-select" id="symbol2" onchange="updateChart(2)">
+                        <option value="R_10">Vol 10</option>
+                        <option value="R_25">Vol 25</option>
+                        <option value="R_50" selected>Vol 50</option>
+                        <option value="R_75">Vol 75</option>
+                        <option value="R_100">Vol 100</option>
+                    </select>
+                    <select class="toolbar-select" id="timeframe2" onchange="updateChart(2)">
+                        <option value="60">1M</option>
+                        <option value="300" selected>5M</option>
+                        <option value="900">15M</option>
+                        <option value="1800">30M</option>
+                        <option value="3600">1H</option>
+                    </select>
+                </div>
+                <div class="chart-canvas-container">
+                    <canvas id="canvas2"></canvas>
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" onclick="zoom(2, 'in')">+</button>
+                        <button class="zoom-btn" onclick="zoom(2, 'out')">−</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart 3 -->
+            <div class="single-chart" id="chart3">
+                <div class="chart-info-bar">
+                    <div class="info-item">
+                        <div class="info-label">Symbol</div>
+                        <div class="info-value" id="symbolName3">Vol 75</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Price</div>
+                        <div class="info-value" id="price3">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Change</div>
+                        <div class="info-value" id="change3">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">H/L</div>
+                        <div class="info-value" id="highlow3">--</div>
+                    </div>
+                </div>
+                <div class="chart-toolbar">
+                    <select class="toolbar-select" id="symbol3" onchange="updateChart(3)">
+                        <option value="R_10">Vol 10</option>
+                        <option value="R_25">Vol 25</option>
+                        <option value="R_50">Vol 50</option>
+                        <option value="R_75" selected>Vol 75</option>
+                        <option value="R_100">Vol 100</option>
+                    </select>
+                    <select class="toolbar-select" id="timeframe3" onchange="updateChart(3)">
+                        <option value="60">1M</option>
+                        <option value="300">5M</option>
+                        <option value="900" selected>15M</option>
+                        <option value="1800">30M</option>
+                        <option value="3600">1H</option>
+                    </select>
+                </div>
+                <div class="chart-canvas-container">
+                    <canvas id="canvas3"></canvas>
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" onclick="zoom(3, 'in')">+</button>
+                        <button class="zoom-btn" onclick="zoom(3, 'out')">−</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart 4 -->
+            <div class="single-chart" id="chart4">
+                <div class="chart-info-bar">
+                    <div class="info-item">
+                        <div class="info-label">Symbol</div>
+                        <div class="info-value" id="symbolName4">Vol 100</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Price</div>
+                        <div class="info-value" id="price4">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Change</div>
+                        <div class="info-value" id="change4">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">H/L</div>
+                        <div class="info-value" id="highlow4">--</div>
+                    </div>
+                </div>
+                <div class="chart-toolbar">
+                    <select class="toolbar-select" id="symbol4" onchange="updateChart(4)">
+                        <option value="R_10">Vol 10</option>
+                        <option value="R_25">Vol 25</option>
+                        <option value="R_50">Vol 50</option>
+                        <option value="R_75">Vol 75</option>
+                        <option value="R_100" selected>Vol 100</option>
+                    </select>
+                    <select class="toolbar-select" id="timeframe4" onchange="updateChart(4)">
+                        <option value="60">1M</option>
+                        <option value="300">5M</option>
+                        <option value="900">15M</option>
+                        <option value="1800" selected>30M</option>
+                        <option value="3600">1H</option>
+                    </select>
+                </div>
+                <div class="chart-canvas-container">
+                    <canvas id="canvas4"></canvas>
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" onclick="zoom(4, 'in')">+</button>
+                        <button class="zoom-btn" onclick="zoom(4, 'out')">−</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Tabs -->
+        <div class="chart-tabs" id="chartTabs">
+            <div class="chart-tab active" onclick="switchChart(1)">Chart 1</div>
+            <div class="chart-tab" onclick="switchChart(2)">Chart 2</div>
+            <div class="chart-tab" onclick="switchChart(3)">Chart 3</div>
+            <div class="chart-tab" onclick="switchChart(4)">Chart 4</div>
+        </div>
+    </div>
+
+    <!-- Signals Page -->
+    <div class="page-container" id="signalsPage">
+        <div class="signals-header">
+            <div class="signals-title">SMC Signals</div>
+            <div class="signals-controls">
+                <button class="signal-filter-btn active" onclick="filterSignals('all')">All</button>
+                <button class="signal-filter-btn" onclick="filterSignals('bullish')">Bullish</button>
+                <button class="signal-filter-btn" onclick="filterSignals('bearish')">Bearish</button>
+            </div>
+        </div>
+        <div class="signals-list" id="signalsList">
+            <div class="no-signals">
+                <div class="no-signals-icon">📊</div>
+                <div>No signals detected yet</div>
+                <div style="font-size: 12px; margin-top: 8px;">Start charts to detect SMC patterns</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Page -->
+    <div class="page-container" id="settingsPage">
+        <div class="settings-section">
+            <div class="settings-item">
+                <div class="settings-label">SMC Analysis</div>
+                <div class="toggle-switch active" onclick="toggleSetting(this)">
+                    <div class="toggle-thumb"></div>
+                </div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-label">Sound Alerts</div>
+                <div class="toggle-switch active" onclick="toggleSetting(this)">
+                    <div class="toggle-thumb"></div>
+                </div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-label">Push Notifications</div>
+                <div class="toggle-switch" onclick="toggleSetting(this)">
+                    <div class="toggle-thumb"></div>
+                </div>
+            </div>
+        </div>
+        <div class="settings-section" style="margin-top: 20px;">
+            <div class="settings-item">
+                <div class="settings-label">Clear All Signals</div>
+                <button class="toolbar-btn" onclick="clearAllSignals()" style="background: #FF453A;">Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="mt5-bottom-nav">
+        <div class="nav-item active" onclick="switchPage('chartsPage')">
+            <div class="nav-icon">📈</div>
+            <div class="nav-label">Charts</div>
+        </div>
+        <div class="nav-item" onclick="switchPage('signalsPage')">
+            <div class="nav-icon">🎯</div>
+            <div class="nav-label">Signals</div>
+        </div>
+        <div class="nav-item" onclick="switchPage('settingsPage')">
+            <div class="nav-icon">⚙️</div>
+            <div class="nav-label">Settings</div>
+        </div>
+    </div>
+
+    <script src="analysis.js"></script>
+</body>
+</html>
