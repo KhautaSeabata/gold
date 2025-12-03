@@ -171,12 +171,28 @@
             flex: 1;
             position: relative;
             background: #000;
-            overflow: hidden;
+            overflow-x: scroll;
+            overflow-y: hidden;
+            cursor: grab;
+            -webkit-overflow-scrolling: touch;
+        }
+        .chart-canvas-container:active {
+            cursor: grabbing;
+        }
+        .chart-canvas-container::-webkit-scrollbar {
+            height: 0;
+            display: none;
+        }
+        .chart-canvas-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .chart-canvas-container::-webkit-scrollbar-thumb {
+            background: transparent;
         }
         canvas {
-            width: 100%;
             height: 100%;
             display: block;
+            min-width: 200%;
         }
         
         .zoom-controls {
