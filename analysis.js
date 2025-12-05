@@ -14,7 +14,7 @@ const SYMBOL_NAMES = {
     'R_25': 'Volatility 25 Index',
     'R_50': 'Volatility 50 Index',
     'R_75': 'Volatility 75 Index',
-    'R_100': 'Volatility 100 Index''
+    'R_100': 'Volatility 100 Index',
     'COM_XAUUSD': 'GOLD'
 };
 
