@@ -61,7 +61,7 @@
             background: #1C1C1E;
             display: flex;
             justify-content: space-around;
-            padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+            padding: 4px 0 calc(4px + env(safe-area-inset-bottom));
             border-top: 1px solid #2C2C2E;
             z-index: 1000;
         }
@@ -80,16 +80,16 @@
             color: #007AFF;
         }
         .nav-icon {
-            font-size: 26px;
+            font-size: 20px;
         }
         .nav-label {
-            font-size: 10px;
+            font-size: 9px;
         }
         
         /* Pages */
         .page-container {
             display: none;
-            height: calc(100vh - 140px);
+            height: calc(100vh - 110px);
             overflow-y: auto;
         }
         .page-container.active {
@@ -440,6 +440,26 @@
                 <div class="account-number">Demo #1234567</div>
                 <div class="account-balance">$10,000.00</div>
             </div>
+
+    <!-- Bottom Navigation -->
+    <div class="mt5-bottom-nav">
+        <div class="nav-item active" onclick="switchPage('chartsPage')">
+            <div class="nav-icon">📈</div>
+            <div class="nav-label">Charts</div>
+        </div>
+        <div class="nav-item" onclick="switchPage('signalsPage')">
+            <div class="nav-icon">🎯</div>
+            <div class="nav-label">Signals</div>
+        </div>
+        <div class="nav-item" onclick="switchPage('settingsPage')">
+            <div class="nav-icon">⚙️</div>
+            <div class="nav-label">Settings</div>
+        </div>
+    </div>
+
+    <script src="analysis.js"></script>
+</body>
+</html>
         </div>
         <div id="connectionStatus">
             <span class="status-indicator status-disconnected"></span>
@@ -491,14 +511,29 @@
                         <option value="R_50">Vol 50</option>
                         <option value="R_75">Vol 75</option>
                         <option value="R_100">Vol 100</option>
+                        <option value="1HZ10V">Vol 10 (1s)</option>
+                        <option value="1HZ25V">Vol 25 (1s)</option>
+                        <option value="1HZ50V">Vol 50 (1s)</option>
+                        <option value="1HZ75V">Vol 75 (1s)</option>
+                        <option value="1HZ100V">Vol 100 (1s)</option>
+                        <option value="1HZ150V">Vol 150 (1s)</option>
+                        <option value="1HZ200V">Vol 200 (1s)</option>
+                        <option value="1HZ300V">Vol 300 (1s)</option>
                         <option value="COM_XAUUSD">GOLD</option>
                     </select>
                     <select class="toolbar-select" id="timeframe1" onchange="updateChart(1)">
                         <option value="60" selected>1M</option>
+                        <option value="120">2M</option>
+                        <option value="180">3M</option>
                         <option value="300">5M</option>
+                        <option value="600">10M</option>
                         <option value="900">15M</option>
                         <option value="1800">30M</option>
                         <option value="3600">1H</option>
+                        <option value="7200">2H</option>
+                        <option value="14400">4H</option>
+                        <option value="28800">8H</option>
+                        <option value="86400">1D</option>
                     </select>
                 </div>
                 <div class="chart-canvas-container">
@@ -537,14 +572,29 @@
                         <option value="R_50" selected>Vol 50</option>
                         <option value="R_75">Vol 75</option>
                         <option value="R_100">Vol 100</option>
+                        <option value="1HZ10V">Vol 10 (1s)</option>
+                        <option value="1HZ25V">Vol 25 (1s)</option>
+                        <option value="1HZ50V">Vol 50 (1s)</option>
+                        <option value="1HZ75V">Vol 75 (1s)</option>
+                        <option value="1HZ100V">Vol 100 (1s)</option>
+                        <option value="1HZ150V">Vol 150 (1s)</option>
+                        <option value="1HZ200V">Vol 200 (1s)</option>
+                        <option value="1HZ300V">Vol 300 (1s)</option>
                         <option value="COM_XAUUSD">GOLD</option>
                     </select>
                     <select class="toolbar-select" id="timeframe2" onchange="updateChart(2)">
                         <option value="60">1M</option>
+                        <option value="120">2M</option>
+                        <option value="180">3M</option>
                         <option value="300" selected>5M</option>
+                        <option value="600">10M</option>
                         <option value="900">15M</option>
                         <option value="1800">30M</option>
                         <option value="3600">1H</option>
+                        <option value="7200">2H</option>
+                        <option value="14400">4H</option>
+                        <option value="28800">8H</option>
+                        <option value="86400">1D</option>
                     </select>
                 </div>
                 <div class="chart-canvas-container">
@@ -583,14 +633,29 @@
                         <option value="R_50">Vol 50</option>
                         <option value="R_75" selected>Vol 75</option>
                         <option value="R_100">Vol 100</option>
+                        <option value="1HZ10V">Vol 10 (1s)</option>
+                        <option value="1HZ25V">Vol 25 (1s)</option>
+                        <option value="1HZ50V">Vol 50 (1s)</option>
+                        <option value="1HZ75V">Vol 75 (1s)</option>
+                        <option value="1HZ100V">Vol 100 (1s)</option>
+                        <option value="1HZ150V">Vol 150 (1s)</option>
+                        <option value="1HZ200V">Vol 200 (1s)</option>
+                        <option value="1HZ300V">Vol 300 (1s)</option>
                         <option value="COM_XAUUSD">GOLD</option>
                     </select>
                     <select class="toolbar-select" id="timeframe3" onchange="updateChart(3)">
                         <option value="60">1M</option>
+                        <option value="120">2M</option>
+                        <option value="180">3M</option>
                         <option value="300">5M</option>
+                        <option value="600">10M</option>
                         <option value="900" selected>15M</option>
                         <option value="1800">30M</option>
                         <option value="3600">1H</option>
+                        <option value="7200">2H</option>
+                        <option value="14400">4H</option>
+                        <option value="28800">8H</option>
+                        <option value="86400">1D</option>
                     </select>
                 </div>
                 <div class="chart-canvas-container">
@@ -629,14 +694,29 @@
                         <option value="R_50">Vol 50</option>
                         <option value="R_75">Vol 75</option>
                         <option value="R_100" selected>Vol 100</option>
+                        <option value="1HZ10V">Vol 10 (1s)</option>
+                        <option value="1HZ25V">Vol 25 (1s)</option>
+                        <option value="1HZ50V">Vol 50 (1s)</option>
+                        <option value="1HZ75V">Vol 75 (1s)</option>
+                        <option value="1HZ100V">Vol 100 (1s)</option>
+                        <option value="1HZ150V">Vol 150 (1s)</option>
+                        <option value="1HZ200V">Vol 200 (1s)</option>
+                        <option value="1HZ300V">Vol 300 (1s)</option>
                         <option value="COM_XAUUSD">GOLD</option>
                     </select>
                     <select class="toolbar-select" id="timeframe4" onchange="updateChart(4)">
                         <option value="60">1M</option>
+                        <option value="120">2M</option>
+                        <option value="180">3M</option>
                         <option value="300">5M</option>
+                        <option value="600">10M</option>
                         <option value="900">15M</option>
                         <option value="1800" selected>30M</option>
                         <option value="3600">1H</option>
+                        <option value="7200">2H</option>
+                        <option value="14400">4H</option>
+                        <option value="28800">8H</option>
+                        <option value="86400">1D</option>
                     </select>
                 </div>
                 <div class="chart-canvas-container">
@@ -706,23 +786,3 @@
             </div>
         </div>
     </div>
-
-    <!-- Bottom Navigation -->
-    <div class="mt5-bottom-nav">
-        <div class="nav-item active" onclick="switchPage('chartsPage')">
-            <div class="nav-icon">📈</div>
-            <div class="nav-label">Charts</div>
-        </div>
-        <div class="nav-item" onclick="switchPage('signalsPage')">
-            <div class="nav-icon">🎯</div>
-            <div class="nav-label">Signals</div>
-        </div>
-        <div class="nav-item" onclick="switchPage('settingsPage')">
-            <div class="nav-icon">⚙️</div>
-            <div class="nav-label">Settings</div>
-        </div>
-    </div>
-
-    <script src="analysis.js"></script>
-</body>
-</html>
