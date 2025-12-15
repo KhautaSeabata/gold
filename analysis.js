@@ -15,6 +15,14 @@ const SYMBOL_NAMES = {
     'R_50': 'Volatility 50 Index',
     'R_75': 'Volatility 75 Index',
     'R_100': 'Volatility 100 Index',
+    '1HZ10V': 'Volatility 10 (1s) Index',
+    '1HZ25V': 'Volatility 25 (1s) Index',
+    '1HZ50V': 'Volatility 50 (1s) Index',
+    '1HZ75V': 'Volatility 75 (1s) Index',
+    '1HZ100V': 'Volatility 100 (1s) Index',
+    '1HZ150V': 'Volatility 150 (1s) Index',
+    '1HZ200V': 'Volatility 200 (1s) Index',
+    '1HZ300V': 'Volatility 300 (1s) Index',
     'COM_XAUUSD': 'GOLD'
 };
 
@@ -976,10 +984,22 @@ async function clearAllSignals() {
 }
 
 function getTimeframeLabel(tf) {
-    const labels = { 60: '1M', 300: '5M', 900: '15M', 1800: '30M', 3600: '1H' };
+    const labels = {
+        60: '1M',
+        120: '2M',
+        180: '3M',
+        300: '5M',
+        600: '10M',
+        900: '15M',
+        1800: '30M',
+        3600: '1H',
+        7200: '2H',
+        14400: '4H',
+        28800: '8H',
+        86400: '1D'
+    };
     return labels[tf] || `${tf}s`;
 }
-
 function toggleSetting(el) {
     el.classList.toggle('active');
 }
