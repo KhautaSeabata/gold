@@ -18,8 +18,10 @@
             background: linear-gradient(135deg, #000 0%, #0a0a0a 25%, #1a1a1a 50%, #0a0a0a 75%, #000 100%);
             background-attachment: fixed;
             color: white;
-            overflow-x: hidden;
+            overflow: hidden;
             height: 100vh;
+            width: 100vw;
+            position: fixed;
         }
 
         .app-container {
@@ -28,34 +30,36 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
         /* Header */
         .header {
             background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(26,26,30,0.95) 100%);
-            padding: 12px 15px;
+            padding: 8px 12px;
             border-bottom: 2px solid transparent;
             border-image: linear-gradient(90deg, #00ff00 0%, #0066ff 50%, #ff0000 100%);
             border-image-slice: 1;
             backdrop-filter: blur(10px);
+            flex-shrink: 0;
         }
 
         .header-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
 
         .logo {
             font-family: 'Orbitron', monospace;
-            font-size: 20px;
+            font-size: 16px;
             font-weight: 900;
             background: linear-gradient(135deg, #00ff00 0%, #0066ff 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 1.5px;
         }
 
         .symbol-selector {
@@ -139,9 +143,9 @@
         /* Control Bar */
         .control-bar {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             overflow-x: auto;
-            padding: 8px 0;
+            padding: 6px 0;
         }
 
         .control-bar::-webkit-scrollbar {
@@ -149,12 +153,12 @@
         }
 
         .timeframe-btn {
-            padding: 6px 14px;
+            padding: 5px 10px;
             background: rgba(0,0,0,0.8);
             border: 1px solid rgba(0,255,0,0.3);
             color: #00ff00;
-            border-radius: 6px;
-            font-size: 11px;
+            border-radius: 5px;
+            font-size: 10px;
             font-weight: 700;
             cursor: pointer;
             white-space: nowrap;
@@ -169,12 +173,12 @@
         }
 
         .control-btn {
-            padding: 6px 14px;
+            padding: 5px 12px;
             background: rgba(0,102,255,0.2);
             border: 1px solid #0066ff;
             color: #0066ff;
-            border-radius: 6px;
-            font-size: 11px;
+            border-radius: 5px;
+            font-size: 10px;
             font-weight: 700;
             cursor: pointer;
             white-space: nowrap;
@@ -192,6 +196,7 @@
             position: relative;
             background: rgba(0,0,0,0.5);
             overflow: hidden;
+            min-height: 0;
         }
 
         #chartCanvas {
@@ -321,29 +326,30 @@
 
         /* Bottom Navigation */
         .bottom-nav {
-            position: fixed;
+            position: relative;
             bottom: 0;
             left: 0;
             right: 0;
             background: linear-gradient(180deg, rgba(26,26,30,0.98) 0%, rgba(0,0,0,0.98) 100%);
             display: flex;
             justify-content: space-around;
-            padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+            padding: 6px 0;
             border-top: 2px solid transparent;
             border-image: linear-gradient(90deg, #00ff00 0%, #0066ff 50%, #ff0000 100%);
             border-image-slice: 1;
             z-index: 1000;
             backdrop-filter: blur(10px);
+            flex-shrink: 0;
         }
 
         .nav-item {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
+            gap: 2px;
             cursor: pointer;
             flex: 1;
-            padding: 4px;
+            padding: 3px;
             color: #555;
             transition: all 0.3s;
         }
@@ -353,11 +359,11 @@
         }
 
         .nav-icon {
-            font-size: 20px;
+            font-size: 18px;
         }
 
         .nav-label {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 600;
             font-family: 'Orbitron', monospace;
             text-transform: uppercase;
@@ -504,5 +510,191 @@
     </div>
 
     <script src="analysis.js"></script>
+    <script>
+        // Global variables
+        let currentSymbol = null;
+        let currentChart = null;
+        let currentTimeframe = 300;
+
+        // Toggle symbol dropdown
+        function toggleSymbolDropdown() {
+            const dropdown = document.getElementById('symbolDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.symbol-selector')) {
+                document.getElementById('symbolDropdown').classList.remove('show');
+            }
+        });
+
+        // Select symbol and load chart
+        function selectSymbol(symbol) {
+            currentSymbol = symbol;
+            
+            // Update UI
+            document.getElementById('currentSymbol').textContent = symbol;
+            document.getElementById('symbolDropdown').classList.remove('show');
+            
+            // Update active state
+            document.querySelectorAll('.symbol-option').forEach(opt => opt.classList.remove('active'));
+            event.target.closest('.symbol-option')?.classList.add('active');
+            
+            // Hide welcome message
+            document.getElementById('welcomeMessage').style.display = 'none';
+            
+            // Show price info
+            document.getElementById('priceInfo').classList.add('show');
+            
+            // Show loading
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            
+            // Initialize chart
+            initializeChart(symbol, currentTimeframe);
+        }
+
+        // Initialize chart
+        function initializeChart(symbol, timeframe) {
+            console.log('Initializing chart for', symbol, 'timeframe', timeframe);
+            
+            // Clean up existing chart
+            if (currentChart && currentChart.ws) {
+                currentChart.ws.close();
+            }
+            
+            // Create temporary DOM elements for ChartManager
+            if (!document.getElementById('canvas1')) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = `
+                    <input type="hidden" id="symbol1" value="${symbol}">
+                    <input type="hidden" id="timeframe1" value="${timeframe}">
+                    <canvas id="canvas1" style="display:none;"></canvas>
+                `;
+                document.body.appendChild(tempDiv);
+            } else {
+                document.getElementById('symbol1').value = symbol;
+                document.getElementById('timeframe1').value = timeframe;
+            }
+            
+            // Initialize ChartManager
+            currentChart = new ChartManager(1);
+            
+            // Override canvas to use chartCanvas
+            currentChart.canvas = document.getElementById('chartCanvas');
+            currentChart.ctx = currentChart.canvas.getContext('2d');
+            currentChart.symbol = symbol;
+            currentChart.timeframe = timeframe;
+            
+            // Resize canvas
+            currentChart.resizeCanvas();
+            
+            // Connect WebSocket
+            currentChart.connect();
+            
+            // Hide loading after 2 seconds
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }, 2000);
+        }
+
+        // Change timeframe
+        function changeTimeframe(tf) {
+            currentTimeframe = tf;
+            
+            // Update active button
+            document.querySelectorAll('.timeframe-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Reload chart if symbol selected
+            if (currentSymbol) {
+                document.getElementById('loadingOverlay').classList.remove('hidden');
+                initializeChart(currentSymbol, tf);
+            }
+        }
+
+        // Generate signal
+        function generateSignal() {
+            if (!currentChart || !currentChart.data || currentChart.data.length < 50) {
+                alert('Please wait for chart data to load or select a symbol first');
+                return;
+            }
+            
+            console.log('Generating signal...');
+            
+            try {
+                // Run SMC analysis
+                currentChart.analyzeSMC();
+                
+                // Generate and display signal
+                const signal = currentChart.generateSignal();
+                
+                if (signal) {
+                    alert(`Signal Generated!
+Symbol: ${signal.symbol}
+Bias: ${signal.bias.toUpperCase()}
+Confidence: ${signal.confidence}%
+Entry: ${signal.entry}
+TP1: ${signal.tp1}
+TP2: ${signal.tp2}
+SL: ${signal.sl}`);
+                    
+                    // Save to Firebase
+                    saveSignalToFirebase(signal);
+                } else {
+                    alert('No valid signal found at this time. Try again later or adjust timeframe.');
+                }
+            } catch (error) {
+                console.error('Error generating signal:', error);
+                alert('Error generating signal. Please try again.');
+            }
+        }
+
+        // Save signal to Firebase
+        async function saveSignalToFirebase(signal) {
+            try {
+                const response = await fetch(`${FIREBASE_URL}/signals.json`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        ...signal,
+                        status: 'active',
+                        timestamp: Date.now()
+                    }),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    console.log('Signal saved to Firebase');
+                } else {
+                    console.error('Failed to save signal');
+                }
+            } catch (error) {
+                console.error('Error saving to Firebase:', error);
+            }
+        }
+
+        // Update connection status
+        function updateConnectionStatus(connected) {
+            // Status indicator (if needed)
+            console.log('Connection status:', connected ? 'Connected' : 'Disconnected');
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (currentChart) {
+                currentChart.resizeCanvas();
+                currentChart.draw();
+            }
+        });
+
+        // Make functions global
+        window.selectSymbol = selectSymbol;
+        window.toggleSymbolDropdown = toggleSymbolDropdown;
+        window.changeTimeframe = changeTimeframe;
+        window.generateSignal = generateSignal;
+        window.updateConnectionStatus = updateConnectionStatus;
+    </script>
 </body>
 </html>
