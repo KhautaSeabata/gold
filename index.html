@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mzanzi FX - Trading Terminal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Rajdhani', -apple-system, sans-serif;
+            background: linear-gradient(135deg, #000 0%, #0a0a0a 25%, #1a1a1a 50%, #0a0a0a 75%, #000 100%);
+            background-attachment: fixed;
+            color: white;
+            overflow-x: hidden;
+            height: 100vh;
+        }
+
+        .app-container {
+            position: relative;
+            z-index: 2;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(26,26,30,0.95) 100%);
+            padding: 12px 15px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, #00ff00 0%, #0066ff 50%, #ff0000 100%);
+            border-image-slice: 1;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .logo {
+            font-family: 'Orbitron', monospace;
+            font-size: 20px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #00ff00 0%, #0066ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .symbol-selector {
+            position: relative;
+        }
+
+        .current-symbol {
+            background: rgba(0,0,0,0.8);
+            border: 2px solid rgba(0,255,0,0.3);
+            color: #00ff00;
+            padding: 8px 35px 8px 15px;
+            border-radius: 8px;
+            font-family: 'Orbitron', monospace;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            position: relative;
+            min-width: 140px;
+        }
+
+        .current-symbol::after {
+            content: '▼';
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 10px;
+        }
+
+        .symbol-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: rgba(0,0,0,0.98);
+            border: 2px solid rgba(0,255,0,0.5);
+            border-radius: 8px;
+            margin-top: 8px;
+            min-width: 200px;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0,255,0,0.3);
+        }
+
+        .symbol-dropdown.show {
+            display: block;
+        }
+
+        .symbol-option {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(0,255,0,0.1);
+            transition: all 0.3s;
+        }
+
+        .symbol-option:last-child {
+            border-bottom: none;
+        }
+
+        .symbol-option:hover {
+            background: rgba(0,255,0,0.1);
+        }
+
+        .symbol-option.active {
+            background: rgba(0,255,0,0.2);
+            border-left: 3px solid #00ff00;
+        }
+
+        .symbol-name {
+            font-family: 'Orbitron', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            color: #00ff00;
+            margin-bottom: 2px;
+        }
+
+        .symbol-desc {
+            font-size: 10px;
+            color: rgba(0,255,0,0.6);
+        }
+
+        /* Control Bar */
+        .control-bar {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 8px 0;
+        }
+
+        .control-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .timeframe-btn {
+            padding: 6px 14px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid rgba(0,255,0,0.3);
+            color: #00ff00;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s;
+            font-family: 'Orbitron', monospace;
+        }
+
+        .timeframe-btn.active {
+            background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
+            color: #000;
+            box-shadow: 0 0 20px rgba(0,255,0,0.5);
+        }
+
+        .control-btn {
+            padding: 6px 14px;
+            background: rgba(0,102,255,0.2);
+            border: 1px solid #0066ff;
+            color: #0066ff;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s;
+            font-family: 'Orbitron', monospace;
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Chart Container */
+        .chart-container {
+            flex: 1;
+            position: relative;
+            background: rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        #chartCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Welcome Message */
+        .welcome-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+            padding: 20px;
+        }
+
+        .welcome-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .welcome-text {
+            font-family: 'Orbitron', monospace;
+            font-size: 24px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #00ff00 0%, #0066ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 15px;
+        }
+
+        .welcome-subtext {
+            font-size: 14px;
+            color: rgba(0,255,0,0.6);
+            margin-bottom: 25px;
+        }
+
+        .symbol-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .symbol-card {
+            background: linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(0,50,0,0.9) 100%);
+            border: 2px solid rgba(0,255,0,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .symbol-card:hover {
+            border-color: #00ff00;
+            box-shadow: 0 0 30px rgba(0,255,0,0.4);
+            transform: translateY(-5px);
+        }
+
+        .symbol-card-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .symbol-card-name {
+            font-family: 'Orbitron', monospace;
+            font-size: 16px;
+            font-weight: 900;
+            color: #00ff00;
+            margin-bottom: 5px;
+        }
+
+        .symbol-card-desc {
+            font-size: 11px;
+            color: rgba(0,255,0,0.6);
+        }
+
+        /* Loading Spinner */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(0,255,0,0.2);
+            border-top-color: #00ff00;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            font-family: 'Orbitron', monospace;
+            color: #00ff00;
+            font-size: 14px;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, rgba(26,26,30,0.98) 0%, rgba(0,0,0,0.98) 100%);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+            border-top: 2px solid transparent;
+            border-image: linear-gradient(90deg, #00ff00 0%, #0066ff 50%, #ff0000 100%);
+            border-image-slice: 1;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            flex: 1;
+            padding: 4px;
+            color: #555;
+            transition: all 0.3s;
+        }
+
+        .nav-item.active {
+            color: #00ff00;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .nav-label {
+            font-size: 10px;
+            font-weight: 600;
+            font-family: 'Orbitron', monospace;
+            text-transform: uppercase;
+        }
+
+        /* Price Info */
+        .price-info {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0,0,0,0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(0,255,0,0.3);
+            display: none;
+        }
+
+        .price-info.show {
+            display: block;
+        }
+
+        .current-price {
+            font-family: 'Orbitron', monospace;
+            font-size: 18px;
+            font-weight: 900;
+            color: #00ff00;
+        }
+
+        .price-change {
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        .price-change.up {
+            color: #00ff00;
+        }
+
+        .price-change.down {            color: #ff0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-top">
+                <div class="logo">MZANZI FX</div>
+                <div class="symbol-selector">
+                    <div class="current-symbol" onclick="toggleSymbolDropdown()" id="currentSymbol">
+                        Select Symbol
+                    </div>
+                    <div class="symbol-dropdown" id="symbolDropdown">
+                        <div class="symbol-option" onclick="selectSymbol('XAUUSD')">
+                            <div class="symbol-name">🏅 XAUUSD</div>
+                            <div class="symbol-desc">Gold / US Dollar</div>
+                        </div>
+                        <div class="symbol-option" onclick="selectSymbol('GER40')">
+                            <div class="symbol-name">🇩🇪 GER40</div>
+                            <div class="symbol-desc">Germany 40 Index</div>
+                        </div>
+                        <div class="symbol-option" onclick="selectSymbol('US30')">
+                            <div class="symbol-name">🇺🇸 US30</div>
+                            <div class="symbol-desc">Dow Jones Industrial</div>
+                        </div>
+                        <div class="symbol-option" onclick="selectSymbol('US100')">
+                            <div class="symbol-name">🇺🇸 US100</div>
+                            <div class="symbol-desc">NASDAQ 100 Index</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Control Bar -->
+            <div class="control-bar">
+                <button class="timeframe-btn" onclick="changeTimeframe(60)">1M</button>
+                <button class="timeframe-btn active" onclick="changeTimeframe(300)">5M</button>
+                <button class="timeframe-btn" onclick="changeTimeframe(900)">15M</button>
+                <button class="timeframe-btn" onclick="changeTimeframe(1800)">30M</button>
+                <button class="timeframe-btn" onclick="changeTimeframe(3600)">1H</button>
+                <button class="timeframe-btn" onclick="changeTimeframe(14400)">4H</button>
+                <button class="timeframe-btn" onclick="changeTimeframe(86400)">1D</button>
+                <button class="control-btn" onclick="generateSignal()">⚡ Generate</button>
+            </div>
+        </div>
+
+        <!-- Chart Container -->
+        <div class="chart-container">
+            <!-- Loading Overlay -->
+            <div class="loading-overlay hidden" id="loadingOverlay">
+                <div class="spinner"></div>
+                <div class="loading-text">Loading chart data...</div>
+            </div>
+
+            <!-- Price Info -->
+            <div class="price-info" id="priceInfo">
+                <div class="current-price" id="currentPrice">--</div>
+                <div class="price-change" id="priceChange">--</div>
+            </div>
+
+            <!-- Welcome Message -->
+            <div class="welcome-message" id="welcomeMessage">
+                <div class="welcome-icon">📊</div>
+                <div class="welcome-text">WELCOME</div>
+                <div class="welcome-subtext">Please choose your symbol</div>
+                <div class="symbol-grid">
+                    <div class="symbol-card" onclick="selectSymbol('XAUUSD')">
+                        <div class="symbol-card-icon">🏅</div>
+                        <div class="symbol-card-name">XAUUSD</div>
+                        <div class="symbol-card-desc">Gold</div>
+                    </div>
+                    <div class="symbol-card" onclick="selectSymbol('GER40')">
+                        <div class="symbol-card-icon">🇩🇪</div>
+                        <div class="symbol-card-name">GER40</div>
+                        <div class="symbol-card-desc">Germany 40</div>
+                    </div>
+                    <div class="symbol-card" onclick="selectSymbol('US30')">
+                        <div class="symbol-card-icon">🇺🇸</div>
+                        <div class="symbol-card-name">US30</div>
+                        <div class="symbol-card-desc">Dow Jones</div>
+                    </div>
+                    <div class="symbol-card" onclick="selectSymbol('US100')">
+                        <div class="symbol-card-icon">🇺🇸</div>
+                        <div class="symbol-card-name">US100</div>
+                        <div class="symbol-card-desc">NASDAQ 100</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart Canvas -->
+            <canvas id="chartCanvas"></canvas>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <div class="nav-item active">
+                <div class="nav-icon">📈</div>
+                <div class="nav-label">Charts</div>
+            </div>
+            <div class="nav-item" onclick="window.location.href='signals.html'">
+                <div class="nav-icon">📋</div>
+                <div class="nav-label">History</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="analysis.js"></script>
+</body>
+</html>
