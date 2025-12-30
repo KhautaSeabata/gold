@@ -10,95 +10,53 @@
         body {
             font-family: 'Rajdhani', -apple-system, sans-serif;
             background: linear-gradient(135deg, #000 0%, #0a0a0a 25%, #1a1a1a 50%, #0a0a0a 75%, #000 100%);
-            background-attachment: fixed; color: white; overflow: hidden; height: 100vh; width: 100vw; position: fixed;
+            background-attachment: fixed; color: white; overflow-x: hidden; height: 100vh;
         }
-        .app-container { position: relative; z-index: 2; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .app-container { position: relative; z-index: 2; height: 100vh; display: flex; flex-direction: column; }
         .header {
             background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(26,26,30,0.95) 100%);
-            padding: 8px 12px; border-bottom: 2px solid transparent;
+            padding: 12px 15px; border-bottom: 2px solid transparent;
             border-image: linear-gradient(90deg, #00ff00 0%, #0066ff 50%, #ff0000 100%);
-            border-image-slice: 1; backdrop-filter: blur(10px); flex-shrink: 0;
+            border-image-slice: 1; backdrop-filter: blur(10px);
         }
-        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .page-title {
-            font-family: 'Orbitron', monospace; font-size: 14px; font-weight: 900;
+            font-family: 'Orbitron', monospace; font-size: 18px; font-weight: 900;
             background: linear-gradient(135deg, #00ff00 0%, #0066ff 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            text-transform: uppercase; letter-spacing: 1px;
+            text-transform: uppercase; letter-spacing: 1.5px;
         }
-        .user-info { font-size: 10px; color: rgba(0,255,0,0.8); font-family: 'Orbitron', monospace; }
-        
-        /* Navigation Row */
-        .nav-row {
-            display: flex;
-            justify-content: center;
-            gap: 25px;
-            margin-bottom: 6px;
-            padding: 4px 0;
-        }
-        .nav-icon-btn {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2px;
-            cursor: pointer;
-            transition: all 0.3s;
-            padding: 3px 8px;
-            border-radius: 4px;
-        }
-        .nav-icon-btn.active {
-            background: rgba(0,255,0,0.1);
-        }
-        .nav-icon-btn .icon {
-            font-size: 16px;
-            color: #555;
-            transition: all 0.3s;
-        }
-        .nav-icon-btn.active .icon {
-            color: #00ff00;
-        }
-        .nav-icon-btn .label {
-            font-size: 8px;
-            font-weight: 600;
-            font-family: 'Orbitron', monospace;
-            text-transform: uppercase;
-            color: #555;
-            transition: all 0.3s;
-        }
-        .nav-icon-btn.active .label {
-            color: #00ff00;
-        }
-        
+        .user-info { font-size: 11px; color: rgba(0,255,0,0.8); font-family: 'Orbitron', monospace; }
         .filter-bar {
-            display: flex; gap: 4px; overflow-x: auto; padding: 3px 0;
+            display: flex; gap: 6px; overflow-x: auto; padding: 4px 0;
         }
         .filter-bar::-webkit-scrollbar { display: none; }
         .filter-btn {
-            padding: 4px 8px; background: rgba(0,0,0,0.8); border: 1px solid rgba(0,255,0,0.3);
-            color: #00ff00; border-radius: 4px; font-size: 9px; font-weight: 600; cursor: pointer;
+            padding: 6px 12px; background: rgba(0,0,0,0.8); border: 1px solid rgba(0,255,0,0.3);
+            color: #00ff00; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer;
             white-space: nowrap; transition: all 0.3s; font-family: 'Orbitron', monospace;
-            text-transform: uppercase; letter-spacing: 0.3px;
+            text-transform: uppercase; letter-spacing: 0.5px;
         }
         .filter-btn.active {
             background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
-            color: #000; box-shadow: 0 0 15px rgba(0,255,0,0.4);
+            color: #000; box-shadow: 0 0 20px rgba(0,255,0,0.5);
         }
         .content {
-            flex: 1; overflow-y: auto; padding: 8px; min-height: 0;
+            flex: 1; overflow-y: auto; padding: 12px;
         }
         .stats-grid {
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px;
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px;
         }
         .stat-card {
             background: linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(0,50,0,0.9) 100%);
-            border-radius: 6px; padding: 6px; border: 1px solid rgba(0,255,0,0.2);
+            border-radius: 10px; padding: 12px; border: 1px solid rgba(0,255,0,0.2);
         }
         .stat-label {
-            font-size: 8px; color: rgba(0,255,0,0.6); margin-bottom: 2px;
+            font-size: 10px; color: rgba(0,255,0,0.6); margin-bottom: 4px;
             font-family: 'Orbitron', monospace; text-transform: uppercase;
         }
         .stat-value {
-            font-size: 16px; font-weight: 900; font-family: 'Orbitron', monospace;
+            font-size: 20px; font-weight: 900; font-family: 'Orbitron', monospace;
         }
         .stat-value.success { color: #00ff00; }
         .stat-value.fail { color: #ff0000; }
@@ -106,21 +64,21 @@
         .stat-value.breakeven { color: #FFD700; }
         .signal-item {
             background: linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(0,50,0,0.9) 100%);
-            border-radius: 8px; padding: 10px; margin-bottom: 8px;
+            border-radius: 10px; padding: 15px; margin-bottom: 12px;
             border-left: 3px solid #0066ff; position: relative;
         }
         .signal-item.success { border-left-color: #00ff00; }
         .signal-item.failed { border-left-color: #ff0000; }
         .signal-item.breakeven { border-left-color: #FFD700; }
         .signal-header {
-            display: flex; justify-content: space-between; margin-bottom: 6px;
+            display: flex; justify-content: space-between; margin-bottom: 10px;
         }
         .signal-symbol {
-            font-family: 'Orbitron', monospace; font-size: 12px; font-weight: 700;
+            font-family: 'Orbitron', monospace; font-size: 14px; font-weight: 700;
             color: #00ff00;
         }
         .status-badge {
-            padding: 3px 6px; border-radius: 4px; font-size: 8px; font-weight: 700;
+            padding: 4px 8px; border-radius: 5px; font-size: 9px; font-weight: 700;
             font-family: 'Orbitron', monospace; text-transform: uppercase;
         }
         .status-badge.success { background: rgba(0,255,0,0.2); color: #00ff00; border: 1px solid #00ff00; }
@@ -128,18 +86,18 @@
         .status-badge.active { background: rgba(0,102,255,0.2); color: #0066ff; border: 1px solid #0066ff; }
         .status-badge.breakeven { background: rgba(255,215,0,0.2); color: #FFD700; border: 1px solid #FFD700; }
         .signal-info {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 6px;
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px;
         }
         .info-item {
-            font-size: 10px;
+            font-size: 11px;
         }
         .info-label { color: rgba(0,255,0,0.6); }
         .info-value { color: #fff; font-weight: 600; font-family: 'Orbitron', monospace; }
         .signal-actions {
-            display: flex; gap: 4px; flex-wrap: wrap;
+            display: flex; gap: 8px; flex-wrap: wrap;
         }
         .action-btn {
-            padding: 4px 8px; border-radius: 4px; font-size: 9px; font-weight: 600;
+            padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 600;
             cursor: pointer; transition: all 0.3s; font-family: 'Orbitron', monospace;
             text-transform: uppercase; border: none;
         }
@@ -150,34 +108,34 @@
         .delete-btn { display: none; }
         .delete-btn.show { display: inline-block; }
         .signal-date {
-            font-size: 9px; color: rgba(0,255,0,0.5); margin-top: 6px;
+            font-size: 10px; color: rgba(0,255,0,0.5); margin-top: 8px;
         }
         .bottom-nav {
-            position: relative; bottom: 0; left: 0; right: 0;
+            position: fixed; bottom: 0; left: 0; right: 0;
             background: linear-gradient(180deg, rgba(26,26,30,0.98) 0%, rgba(0,0,0,0.98) 100%);
-            display: flex; justify-content: space-around; padding: 6px 0;
+            display: flex; justify-content: space-around; padding: 4px 0 calc(4px + env(safe-area-inset-bottom));
             border-top: 2px solid transparent;
             border-image: linear-gradient(90deg, #00ff00 0%, #0066ff 50%, #ff0000 100%);
-            border-image-slice: 1; z-index: 1000; backdrop-filter: blur(10px); flex-shrink: 0;
+            border-image-slice: 1; z-index: 1000; backdrop-filter: blur(10px);
         }
         .nav-item {
             display: flex; flex-direction: column; align-items: center; gap: 2px;
             cursor: pointer; flex: 1; padding: 3px; color: #555; transition: all 0.3s;
         }
         .nav-item.active { color: #00ff00; }
-        .nav-icon { font-size: 18px; }
-        .nav-label { font-size: 9px; font-weight: 600; font-family: 'Orbitron', monospace; text-transform: uppercase; }
+        .nav-icon { font-size: 16px; }
+        .nav-label { font-size: 8px; font-weight: 600; font-family: 'Orbitron', monospace; text-transform: uppercase; }
         .no-signals {
-            text-align: center; padding: 40px 20px; color: rgba(0,255,0,0.4);
+            text-align: center; padding: 60px 20px; color: rgba(0,255,0,0.4);
         }
-        .no-signals-icon { font-size: 40px; margin-bottom: 10px; }
+        .no-signals-icon { font-size: 48px; margin-bottom: 15px; }
         .date-filter {
-            display: flex; gap: 6px; margin-bottom: 8px; align-items: center;
+            display: flex; gap: 8px; margin-bottom: 12px; align-items: center;
         }
         .date-input {
-            flex: 1; padding: 4px 8px; background: rgba(0,0,0,0.8);
-            border: 1px solid rgba(0,255,0,0.3); color: #00ff00; border-radius: 4px;
-            font-size: 10px; font-family: 'Rajdhani', sans-serif;
+            flex: 1; padding: 6px 10px; background: rgba(0,0,0,0.8);
+            border: 1px solid rgba(0,255,0,0.3); color: #00ff00; border-radius: 6px;
+            font-size: 11px; font-family: 'Rajdhani', sans-serif;
         }
     </style>
 </head>
@@ -188,8 +146,6 @@
                 <div class="page-title">Historical Signals</div>
                 <div class="user-info" id="userInfo">MZANZI FX</div>
             </div>
-            
-            <!-- Navigation Icons Row -->
             <div class="nav-row">
                 <div class="nav-icon-btn" onclick="window.location.href='index.html'">
                     <div class="icon">📈</div>
@@ -200,7 +156,6 @@
                     <div class="label">History</div>
                 </div>
             </div>
-            
             <div class="filter-bar">
                 <button class="filter-btn active" onclick="filterSignals('all')">All</button>
                 <button class="filter-btn" onclick="filterSignals('active')">Active</button>
@@ -244,22 +199,14 @@
                 </div>
             </div>
         </div>
+        <div class="bottom-nav">
+            <div class="nav-item" onclick="window.location.href='indices.html'"><div class="nav-icon">📈</div><div class="nav-label">Charts</div></div>
+            <div class="nav-item active"><div class="nav-icon">📋</div><div class="nav-label">History</div></div>
+            <div class="nav-item" onclick="window.location.href='forex.html'"><div class="nav-icon">💱</div><div class="nav-label">Forex</div></div>
+        </div>
     </div>
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        
-        const app = initializeApp({
-            apiKey: "AIzaSyC8Yh7DY90nujN6OiVD6kIHu3b-M0Kgero", 
-            authDomain: "mzanzifx.firebaseapp.com",
-            databaseURL: "https://mzanzifx-default-rtdb.firebaseio.com", 
-            projectId: "mzanzifx",
-            storageBucket: "mzanzifx.firebasestorage.app", 
-            messagingSenderId: "589859282488",
-            appId: "1:589859282488:web:14f12501983b021cc1d0cd"
-        });
-        
-        // No authentication required - direct access
-        console.log('Firebase initialized');
+    <script>
+        console.log('Signals page loaded - no authentication required');
     </script>
     <script src="signals.js"></script>
 </body>
