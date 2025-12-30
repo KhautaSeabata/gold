@@ -70,23 +70,23 @@
             background: rgba(0,0,0,0.8);
             border: 2px solid rgba(0,255,0,0.3);
             color: #00ff00;
-            padding: 8px 35px 8px 15px;
+            padding: 6px 30px 6px 12px;
             border-radius: 8px;
             font-family: 'Orbitron', monospace;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 700;
             cursor: pointer;
             position: relative;
-            min-width: 140px;
+            min-width: 120px;
         }
 
         .current-symbol::after {
             content: '▼';
             position: absolute;
-            right: 12px;
+            right: 10px;
             top: 50%;
             transform: translateY(-50%);
-            font-size: 10px;
+            font-size: 8px;
         }
 
         .symbol-dropdown {
@@ -108,7 +108,7 @@
         }
 
         .symbol-option {
-            padding: 12px 15px;
+            padding: 10px 12px;
             cursor: pointer;
             border-bottom: 1px solid rgba(0,255,0,0.1);
             transition: all 0.3s;
@@ -129,61 +129,130 @@
 
         .symbol-name {
             font-family: 'Orbitron', monospace;
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 700;
             color: #00ff00;
             margin-bottom: 2px;
         }
 
         .symbol-desc {
-            font-size: 10px;
+            font-size: 9px;
             color: rgba(0,255,0,0.6);
         }
 
-        /* Control Bar */
-        .control-bar {
+        /* Navigation Row (above timeframes) */
+        .nav-row {
             display: flex;
-            gap: 6px;
-            overflow-x: auto;
-            padding: 6px 0;
+            justify-content: center;
+            gap: 25px;
+            margin-bottom: 6px;
+            padding: 4px 0;
         }
 
-        .control-bar::-webkit-scrollbar {
-            display: none;
+        .nav-icon-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        .nav-icon-btn.active {
+            background: rgba(0,255,0,0.1);
+        }
+
+        .nav-icon-btn .icon {
+            font-size: 16px;
+            color: #555;
+            transition: all 0.3s;
+        }
+
+        .nav-icon-btn.active .icon {
+            color: #00ff00;
+        }
+
+        .nav-icon-btn .label {
+            font-size: 8px;
+            font-weight: 600;
+            font-family: 'Orbitron', monospace;
+            text-transform: uppercase;
+            color: #555;
+            transition: all 0.3s;
+        }
+
+        .nav-icon-btn.active .label {
+            color: #00ff00;
+        }
+
+        /* MT5 Style Timeframe Ring */
+        .control-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 3px;
+            padding: 6px 0;
+            flex-wrap: wrap;
+        }
+
+        .timeframe-ring {
+            display: flex;
+            gap: 2px;
+            background: rgba(0,0,0,0.5);
+            padding: 3px;
+            border-radius: 20px;
+            border: 1px solid rgba(0,255,0,0.2);
         }
 
         .timeframe-btn {
-            padding: 5px 10px;
+            padding: 4px 10px;
             background: rgba(0,0,0,0.8);
-            border: 1px solid rgba(0,255,0,0.3);
-            color: #00ff00;
-            border-radius: 5px;
-            font-size: 10px;
+            border: 1px solid rgba(0,255,0,0.2);
+            color: rgba(0,255,0,0.7);
+            border-radius: 15px;
+            font-size: 9px;
             font-weight: 700;
             cursor: pointer;
             white-space: nowrap;
             transition: all 0.3s;
             font-family: 'Orbitron', monospace;
+            min-width: 32px;
+            text-align: center;
+        }
+
+        .timeframe-btn:hover {
+            background: rgba(0,255,0,0.1);
+            border-color: rgba(0,255,0,0.5);
         }
 
         .timeframe-btn.active {
             background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
             color: #000;
-            box-shadow: 0 0 20px rgba(0,255,0,0.5);
+            border-color: #00ff00;
+            box-shadow: 0 0 15px rgba(0,255,0,0.5);
+            transform: scale(1.05);
         }
 
         .control-btn {
-            padding: 5px 12px;
+            padding: 5px 15px;
             background: rgba(0,102,255,0.2);
             border: 1px solid #0066ff;
             color: #0066ff;
-            border-radius: 5px;
+            border-radius: 15px;
             font-size: 10px;
             font-weight: 700;
             cursor: pointer;
             white-space: nowrap;
             transition: all 0.3s;
             font-family: 'Orbitron', monospace;
+            margin-left: 8px;
+        }
+
+        .control-btn:hover {
+            background: rgba(0,102,255,0.3);
+            box-shadow: 0 0 15px rgba(0,102,255,0.4);
         }
 
         .control-btn:active {
@@ -436,16 +505,30 @@
                 </div>
             </div>
 
-            <!-- Control Bar -->
+            <!-- Navigation Icons Row -->
+            <div class="nav-row">
+                <div class="nav-icon-btn active" onclick="switchView('charts')">
+                    <div class="icon">📈</div>
+                    <div class="label">Charts</div>
+                </div>
+                <div class="nav-icon-btn" onclick="window.location.href='signals.html'">
+                    <div class="icon">📋</div>
+                    <div class="label">History</div>
+                </div>
+            </div>
+
+            <!-- MT5 Style Timeframe Ring -->
             <div class="control-bar">
-                <button class="timeframe-btn" onclick="changeTimeframe(60)">1M</button>
-                <button class="timeframe-btn active" onclick="changeTimeframe(300)">5M</button>
-                <button class="timeframe-btn" onclick="changeTimeframe(900)">15M</button>
-                <button class="timeframe-btn" onclick="changeTimeframe(1800)">30M</button>
-                <button class="timeframe-btn" onclick="changeTimeframe(3600)">1H</button>
-                <button class="timeframe-btn" onclick="changeTimeframe(14400)">4H</button>
-                <button class="timeframe-btn" onclick="changeTimeframe(86400)">1D</button>
-                <button class="control-btn" onclick="generateSignal()">⚡ Generate</button>
+                <div class="timeframe-ring">
+                    <button class="timeframe-btn" onclick="changeTimeframe(60)">M1</button>
+                    <button class="timeframe-btn active" onclick="changeTimeframe(300)">M5</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe(900)">M15</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe(1800)">M30</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe(3600)">H1</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe(14400)">H4</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe(86400)">D1</button>
+                </div>
+                <button class="control-btn" onclick="generateSignal()">⚡ Signal</button>
             </div>
         </div>
 
@@ -494,18 +577,6 @@
 
             <!-- Chart Canvas -->
             <canvas id="chartCanvas"></canvas>
-        </div>
-
-        <!-- Bottom Navigation -->
-        <div class="bottom-nav">
-            <div class="nav-item active">
-                <div class="nav-icon">📈</div>
-                <div class="nav-label">Charts</div>
-            </div>
-            <div class="nav-item" onclick="window.location.href='signals.html'">
-                <div class="nav-icon">📋</div>
-                <div class="nav-label">History</div>
-            </div>
         </div>
     </div>
 
@@ -695,6 +766,12 @@ SL: ${signal.sl}`);
         window.changeTimeframe = changeTimeframe;
         window.generateSignal = generateSignal;
         window.updateConnectionStatus = updateConnectionStatus;
+        window.switchView = function(view) {
+            if (view === 'charts') {
+                // Already on charts page
+                console.log('Already on charts page');
+            }
+        };
     </script>
 </body>
 </html>
