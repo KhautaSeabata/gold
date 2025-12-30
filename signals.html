@@ -27,6 +27,48 @@
             text-transform: uppercase; letter-spacing: 1px;
         }
         .user-info { font-size: 10px; color: rgba(0,255,0,0.8); font-family: 'Orbitron', monospace; }
+        
+        /* Navigation Row */
+        .nav-row {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            margin-bottom: 6px;
+            padding: 4px 0;
+        }
+        .nav-icon-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+        .nav-icon-btn.active {
+            background: rgba(0,255,0,0.1);
+        }
+        .nav-icon-btn .icon {
+            font-size: 16px;
+            color: #555;
+            transition: all 0.3s;
+        }
+        .nav-icon-btn.active .icon {
+            color: #00ff00;
+        }
+        .nav-icon-btn .label {
+            font-size: 8px;
+            font-weight: 600;
+            font-family: 'Orbitron', monospace;
+            text-transform: uppercase;
+            color: #555;
+            transition: all 0.3s;
+        }
+        .nav-icon-btn.active .label {
+            color: #00ff00;
+        }
+        
         .filter-bar {
             display: flex; gap: 4px; overflow-x: auto; padding: 3px 0;
         }
@@ -146,6 +188,19 @@
                 <div class="page-title">Historical Signals</div>
                 <div class="user-info" id="userInfo">MZANZI FX</div>
             </div>
+            
+            <!-- Navigation Icons Row -->
+            <div class="nav-row">
+                <div class="nav-icon-btn" onclick="window.location.href='index.html'">
+                    <div class="icon">📈</div>
+                    <div class="label">Charts</div>
+                </div>
+                <div class="nav-icon-btn active">
+                    <div class="icon">📋</div>
+                    <div class="label">History</div>
+                </div>
+            </div>
+            
             <div class="filter-bar">
                 <button class="filter-btn active" onclick="filterSignals('all')">All</button>
                 <button class="filter-btn" onclick="filterSignals('active')">Active</button>
@@ -188,10 +243,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="bottom-nav">
-            <div class="nav-item" onclick="window.location.href='index.html'"><div class="nav-icon">📈</div><div class="nav-label">Charts</div></div>
-            <div class="nav-item active"><div class="nav-icon">📋</div><div class="nav-label">History</div></div>
         </div>
     </div>
     <script type="module">

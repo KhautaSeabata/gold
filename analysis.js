@@ -17,9 +17,9 @@ let signalFilter = 'all';
 // ============================================================================
 const SYMBOL_CONFIG = {
     'XAUUSD': { name: 'GOLD (XAU/USD)', base: 2650.00, apiSymbol: 'frxXAUUSD' },
-    'GER40': { name: 'GERMANY 40 (GER40)', base: 19900, apiSymbol: 'WLDGDAXI' },
+    'GER40': { name: 'GERMANY 40 (GER40)', base: 19900, apiSymbol: 'WLDGER40' },
     'US30': { name: 'DOW JONES (US30)', base: 42500, apiSymbol: 'WLDUS30' },
-    'US100': { name: 'NASDAQ 100 (US100)', base: 16900, apiSymbol: 'WLDNAS100' }
+    'US100': { name: 'NASDAQ 100 (US100)', base: 16900, apiSymbol: 'WLDUS100' }
 };
 
 // ============================================================================
